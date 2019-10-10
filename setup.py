@@ -14,7 +14,7 @@ except ImportError:
     from distutils.core import setup, find_packages
 
 
-config = __import__('flask_occum')
+config = __import__('flask_occam')
 with open('requirements.txt', 'r') as reqs:
     requirements = map(lambda x: x.rstrip(), reqs.readlines())
 

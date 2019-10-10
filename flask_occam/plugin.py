@@ -12,7 +12,7 @@
 
 # plugin
 # ------
-class Occum(object):
+class Occam(object):
     """
     Plugin for updating flask functions to handle class-based URL
     routing.

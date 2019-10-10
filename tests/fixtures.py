@@ -12,7 +12,7 @@ import factory
 from flask import Flask, request, jsonify
 from werkzeug.exceptions import NotFound
 from flask_sqlalchemy import SQLAlchemy
-from flask_occum import Occum, ActionHandler, transactional, validate
+from flask_occam import Occam, ActionHandler, transactional, validate
 from wtforms import validators, StringField
 
 from . import SANDBOX
@@ -32,7 +32,7 @@ class Config(object):
 app = Flask(__name__)
 app.config.from_object(Config)
 db = SQLAlchemy(app)
-occum = Occum(app)
+occam = Occam(app)
 
 
 # validators
