@@ -36,6 +36,7 @@ The following is a minimal application highlighting most of the major features p
 .. code-block:: python
 
     from wtforms import validators
+    from flask_occam import transactional, validate, paginate, log, optional
 
     # models
     class Item(db.Model):
@@ -43,70 +44,78 @@ The following is a minimal application highlighting most of the major features p
 
         id = db.Column(db.Integer, primary_key=True)
         name = db.Column(db.String(255), nullable=False, unique=True, index=True)
-        email = db.Column(db.String(255))
+        url = db.Column(db.String(255))
+
+        def json(self):
+            return dict(
+                id=self.id,
+                name=self.name,
+                url=self.url
+            )
 
 
     # endpoints
     @app.route('/items')
     class Items(object):
-        """
-        With this extension, you can set up your routing in a
-        class-based style, similar to Tornado, or other Flask plugins
-        for REST API management.
-        """
 
         @paginate(limit=50, total=Item.count)
         def get(self, limit, offset):
             """
-            The `paginate` decorator automatically includes
-            pagination information in the header for the response,
-            depending on the length of what this method returns.
+            GET /items
             """
             items = Item.all(limit=limit, offset=offset)
-            return jsonify([dict(id=x.id, name=x.name) for x in items]), 200
+            return [x.json() for x in items], 200
+
+        @validate(name=str)
+        @transactional
+        @log.info('Created new user with name {name}')
+        def post(self):
+            """
+            POST /items
+            """
+            item = Item.create(**request.json)
+            return item.json(), 201
+
 
     @app.route('/items/<id(Item):item>')
     class SingleItem(object):
         
         def get(self, item):
             """
-            The `id` url processor in @app.route automatically
-            searches for an `Item` object and raises NotFound
-            if it doesn't exist. An existing result is returned
-            as the `item` argument.
+            GET /items/:id
             """
-            return jsonify(id=item.id, name=item.name), 200
+            return item.json(), 200
 
         @validate(
-            name=str,
-            email=validators.Email()
+            name=optional(str),
+            url=optional(validators.URL())
         )
         @transactional
         @log.info('Changed metadata for item {item.name}')
         def put(self, item):
             """
-            The `validate` decorator automatically does payload
-            validation using the specified validators.
-
-            The `transactional` decorator automatically commits a 
-            database session once the response is successfully
-            created, rolling back the session if there was an
-            error.
-
-            The `log` decorator automatically writes to
-            the application log with string formatting from the
-            method arguments.
+            PUT /items/:id
             """
             item.update(**request.json)
-            return jsonify(id=item.id, name=item.name), 200
+            return item.json(), 200
+
+        @transactional
+        def delete(self, item):
+            """
+            DELETE /items/:id
+            """
+            item.delete()
+            return jsonify(msg='Deleted item'), 204
 
 
 There's quite a bit to unpack from the application detailed above, including:
 
-    * Facilities for automatically querying models via url converters.
-    * Automatic pagination (in response header) for requests.
+    * Facilities for automatically resolving model identifiers into objects via url converters.
+    * Automatic pagination (via response header) for requests.
     * Automatic database transaction support for endpoint handlers.
     * Tools for simpler logging of requests or API methods.
     * Automatic payload validation (with support for WTForms validators).
+    * SQLAlchemy extensions for CRUD operations on models (providing a simpler API).
+
 
 For more in-depth discussion on these (and more) topics, design considerations, and how to fully utilize the plugin, see the `User Guide <./usage.html>`_.
