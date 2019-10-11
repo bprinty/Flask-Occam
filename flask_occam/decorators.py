@@ -14,7 +14,6 @@ from functools import wraps
 from werkzeug.exceptions import ExpectationFailed
 from werkzeug.datastructures import ImmutableMultiDict
 from flask import request, current_app, Response
-from flask_babel import _
 from wtforms import Form
 from .errors import ValidationError
 
@@ -146,6 +145,48 @@ def paginate(**options):
     return decorator
 
 
+
+
+from wtforms.fields.core import UnboundField, Field
+from wtforms.fields.core import UnboundField, Field
+from wtforms import FieldList
+from wtforms import StringField, PasswordField, IntegerField
+from wtforms import BooleanField, FloatField, DateField, DateTimeField
+from wtforms import validators
+
+# helpers
+# -------
+def create_validator(typ):
+    """
+    Create validator from type object, using common
+    type objects in python.
+    """
+    mapper = {
+        'str': StringField,
+        'bool': BooleanField,
+        'float': FloatField,
+        'int': IntegerField,
+        'date': DateField,
+        'datetime': DateTimeField
+    }
+
+    # handle list inputs
+    if isinstance(typ, list):
+        raise NotImplementedError('List types for validation not currently supported!')
+        if len(typ) != 1:
+            raise AssertionError('Lists specified for field validation must have exactly one element to validate on.')
+        if isinstance(typ[0], Field):
+            return [typ[0]]
+        else:
+            return [create_validator(typ[0])]
+
+    # look for validation scheme in mapper
+    if typ.__name__ not in mapper:
+        raise AssertionError('No rule for validating on type {}'.format(typ))
+
+    return mapper.get(typ.__name__)(typ.__name__, [validators.DataRequired()])
+
+
 def validate(*vargs, **vkwargs):
     """
     Validate payload data inputted to request handler.
@@ -196,7 +237,6 @@ def validate(*vargs, **vkwargs):
     TODO: INCLUDE PLACE FOR DOCUMENTATION URL IN REQUEST?
 
     """
-    from .validators import create_validator, Field, UnboundField
 
     # validator class
     if len(vargs):
