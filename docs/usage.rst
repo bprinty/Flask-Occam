@@ -93,53 +93,64 @@ Now, let's use ``Flask-Occum`` to clean up some of the boilerplate:
 .. code-block:: python
     
     from wtforms import validators
+    from flask_occum import Occum
+    from flask_occum import transactional, validate, log, paginate
 
     # initialize plugin
     occum = Occum(app, db)
 
     # endpoints
     @app.route('/items')
-    class Items:
-        def get(self):
-            return jsonify([
-                dict(id=x.id, name=x.name)
-                for x in Item.all()
-            ])
+    class Items(object):
 
-        @validate(
-            name=str
-            email=email=validators.Email()
-        )
+        @paginate(limit=50, total=Item.count)
+        def get(self, limit, offset):
+            """
+            GET /items
+            """
+            items = Item.all(limit=limit, offset=offset)
+            return [x.json() for x in items], 200
+
+        @validate(name=str)
         @transactional
+        @log.info('Created new user with name {name}')
         def post(self):
-            item = Item.create(**request.json
-            return jsonify(id=item.id, name=item.name)
+            """
+            POST /items
+            """
+            item = Item.create(**request.json)
+            return item.json(), 201
 
 
     @app.route('/items/<id(Item):item>')
-    class Item:
+    class SingleItem(object):
+        
         def get(self, item):
-            return jsonify(
-                id=item.id,
-                name=item.name
-            )
+            """
+            GET /items/:id
+            """
+            return item.json(), 200
 
         @validate(
-            name=str,
-            email=validators.Email()
+            name=optional(str),
+            url=optional(validators.URL())
         )
         @transactional
+        @log.info('Changed metadata for item {item.name}')
         def put(self, item):
+            """
+            PUT /items/:id
+            """
             item.update(**request.json)
-            return jsonify(
-                id=item.id,
-                name=item.name
-            )
+            return item.json(), 200
 
         @transactional
         def delete(self, item):
+            """
+            DELETE /items/:id
+            """
             item.delete()
-            return jsonify(msg='Deleted user')
+            return jsonify(msg='Deleted item'), 204
 
 
 
@@ -149,42 +160,193 @@ As you can see above, ...
 Endpoint Documentation
 ----------------------
 
-Another benefit of using a class-based approach to request processing is ...
+Another benefit of using a class-based approach to request processing is that it enables you to include clear and concise documentation for your endpoints in the docstrings for each request method. This allows developers to easily generate API documentation for their application using the sphinx ``autodoc`` functionality. Here's a docstring-ified version of the example provided in the overview section of the documentation:
 
 
 .. code-block:: python
 
-    @app.route('/items/<id(Item):item>')
-    class Item:
-        def get(self, item):
+    @app.route('/items')
+    class Items(object):
+
+        @paginate(limit=50, total=Item.count)
+        def get(self, limit, offset):
             """
-            GET /items/:id
+            GET /items
 
-            Query for existing items in application database.
+            Query for existing item in application database.
 
-            Arguments:
-                id (int): Identifier for user.
+            Parameters:
+                limit (str): (optional) Return limit for query.
+                offset (str): (optional) Offset for querying results.
 
             Response:
-                id (int): Identifier for item.
-                name (str): Item name.
-                email (str): Item email.
+                List of item objects. See GET /items/:id for
+                information on return payloads.
 
             Status:
                 Success: 200 Created
                 Missing: 404 Not Found
             """
-            return jsonify(
-                id=item.id,
-                name=item.name
-            )
+            items = Item.all(limit=limit, offset=offset)
+            return [x.json() for x in items], 200
+
+        @validate(name=str)
+        @transactional
+        @log.info('Created new user {name}')
+        def post(self):
+            """
+            POST /items
+
+            Query for existing item in application database.
+
+            Arguments:
+                id (int): Identifier for item.
+
+            Parameters:
+                name (str): Name for item
+
+            Response:
+                id (int): Identifier for item.
+                name (str): Item name.
+                url (str): Item URL.
+
+            Status:
+                Success: 201 Created
+                Missing: 404 Not Found
+                Failure: 422 Invalid Request
+            """
+            item = Item.create(**request.json)
+            return item.json(), 201
 
 
-... talk about sphinx support
+    @app.route('/items/<id(Item):item>')
+    class SingleItem(object):
+        
+        def get(self, item):
+            """
+            GET /items/:id
+
+            Query for existing item in application database.
+
+            Arguments:
+                id (int): Identifier for item.
+
+            Response:
+                id (int): Identifier for item.
+                name (str): Item name.
+
+            Status:
+                Success: 200 OK
+                Missing: 404 Not Found
+            """
+            return jsonify(id=item.id, name=item.name), 200
+
+        @validate(
+            name=optional(str),
+            url=optional(validators.URL())
+        )
+        @transactional
+        @log.info('Changed metadata for item {item.name}')
+        def put(self, item):
+            """
+            PUT /items/:id
+
+            Update existing item in application database.
+
+            Arguments:
+                id (int): Identifier for item.
+
+            Parameters:
+                name (str): (optional) Name for item 
+                url (str): (optional) URL for item 
+
+            Response:
+                id (int): Identifier for item.
+                name (str): Item name.
+                url (str): Item url.
+
+            Status:
+                Success: 200 OK
+                Missing: 404 Not Found
+                Failure: 422 Invalid Request
+            """
+            item.update(**request.json)
+            return item.json(), 200
+
+        @transactional
+        def delete(self, item):
+            """
+            DELETE /items/:id
+
+            Delete existing item in application database.
+
+            Arguments:
+                id (int): Identifier for item.
+
+            Status:
+                Success: 204 No Content
+                Missing: 404 Not Found
+            """
+            item.delete()
+            return jsonify(msg='Deleted item'), 204
+
+
+Nice, right? Defining your APIs like the above helps with code clarity, and forces developers to develop good habits when working on new endpoints. Sphinx can automatically generate html documentation from these docstrings using the ``autodoc`` extension. Here's an example of how to include auto-documentation for API handlers in your sphinx docs:
+
+.. code-block:: python
+    
+    .. autoclass:: app.models.Item
+       :members:
+
+In addition, you can have Flask-Occum automatically serve REST-based documentation for your endpoints by enabling the ``OCCUM_DOCS_BLUEPRINT`` configuration option. With that blueprint, you can retrieve endpoint documentation via request:
+
+..  code-block:: bash
+
+    ~$ curl -X GET http://localhost:5000/docs/items/1
+    <pre>
+        GET /items/:id
+
+        Query for existing item in application database.
+
+        Arguments:
+            id (int): Identifier for item.
+
+        Response:
+            id (int): Identifier for item.
+            name (str): Item name.
+
+        Status:
+            Success: 200 OK
+            Missing: 404 Not Found
+    </pre>
 
 
 Custom Request Handlers
 -----------------------
+
+In addition to request handling via classes, you can also create custom classes for special endpoint handling. By default, Flask-Occum comes with two additional handlers:
+
+* **ActionHandler** - Dispatch actions encoded in a URL (``POST /api/item/:id/:action``) to specific class methods. This is particularly useful for actions like ``archive`` or other model-specific functionality that needs to take place.
+* **QueryHandler** - Dispatch nested sub-queries encoded in a URL (``GET /api/item/:id/:query``) to specific lass melthods. This is useful for queries like ``status`` or other model specific querying that needs to be available.
+
+Here's an example of using the **ActionHandler** helper class for processing endpoints that submit specific server-side actions (**QueryHandler** uses a very similar API):
+
+.. code-block:: python
+
+    from flask_occum import ActionHandler
+    
+    @app.route('/items/<id(Item):item>/<action>')
+    class ItemActions(ActionHandler):
+
+        def archive(self, item):
+            # code to archive item whenever
+            # POST /items/:id/archive is submitted.
+            return
+
+        def unarchive(self, item):
+            # code to unarchive item whenever
+            # POST /items/:id/unarchive is submitted.
+            return
 
 
 URL Processors
@@ -193,15 +355,26 @@ URL Processors
 Above, we alluded to a custom url processor that automatically queries for ...
 
 
+Using Blueprints
+----------------
+
+Flask-Occum is designed for seamless integration with Flask, without changing much of how the app is configured or structured.
+
+...
+
 Decorators
 ----------
 
 ``@validate``
 +++++++++++++
 
+With any large-scale web application, establishing a client-server contract for requests is incredibly important for keeping development organized and code clean. This extension provides a mechanism for ...
+
 
 ``@log``
 ++++++++
+
+
 
 
 ``@paginate``
