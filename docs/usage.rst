@@ -154,7 +154,9 @@ Now, let's use ``Flask-Occum`` to clean up some of the boilerplate:
 
 
 
-As you can see above, ...
+As you can see above, a good deal of the original boilerplate was removed, and although there is a similar number of lines of code, the readability (and by extension maintainability) is much better. The Occam example also includes additional utilities like payload validation, request action logging, and automatic pagination, which the original example didn't provide (and would require a lot of code to produce).
+
+Each of the utilities shown above are explained in greater detail throughout the documentation. This is example is mainly meant to give readers a *feel* for how application development changes with the extension.
 
 
 Endpoint Documentation
@@ -324,7 +326,7 @@ In addition, you can have Flask-Occum automatically serve REST-based documentati
 Custom Request Handlers
 -----------------------
 
-In addition to request handling via classes, you can also create custom classes for special endpoint handling. By default, Flask-Occum comes with two additional handlers:
+Along with class-based request handling, you can also create custom classes for special endpoint handling. By default, Flask-Occum comes with two additional handlers:
 
 * **ActionHandler** - Dispatch actions encoded in a URL (``POST /api/item/:id/:action``) to specific class methods. This is particularly useful for actions like ``archive`` or other model-specific functionality that needs to take place.
 * **QueryHandler** - Dispatch nested sub-queries encoded in a URL (``GET /api/item/:id/:query``) to specific lass melthods. This is useful for queries like ``status`` or other model specific querying that needs to be available.
@@ -352,15 +354,73 @@ Here's an example of using the **ActionHandler** helper class for processing end
 URL Processors
 --------------
 
-Above, we alluded to a custom url processor that automatically queries for ...
+Above, we alluded to a custom url processor that automatically queries for objects of class ``Item`` ...
+
+Without this URL processor, querying for the item and checking if it exists creates boilerplate that permeates the entire codebase:
+
+.. code-block:: python
+
+    @app.route('/items/<int:ident>', methods=['GET'])
+    def get_item(ident):
+        item = db.session.query(Item)\                 ## boilerplate
+                 .filter_by(id=ident).first()          ## boilerplate
+        if not item:                                   ## boilerplate
+            raise NotFound     
+        return item.json()
+
+With the URL processor, all of the querying and raising ``NotFound`` errors is automatically managed when a request comes in:
+
+.. code-block:: python
+
+    @app.route('/items/<id(Item):item>')
+    def get_item(item):
+        # the ``item`` argument is automatically transformed
+        # into an ``Item`` object when an identifier is passed into
+        # the URL like before 
+        return item.json()
+
+You can also do the same with any other object in the database. For example:
+
+.. code-block:: python
+
+    @app.route('/users/<id(User):user>/items/<id(Item):item>')
+    def get_user_item(user, item):
+        # Like before, ``user`` is a ``User`` object, and
+        # ``item`` is an ``Item`` object.
+        pass
 
 
 Using Blueprints
 ----------------
 
-Flask-Occum is designed for seamless integration with Flask, without changing much of how the app is configured or structured.
+Flask-Occum is designed for seamless integration with Flask, without changing much of how the app is configured or structured. The only Flask-y convention that needs to be slightly altered is how ``Blueprints`` are used.
 
-...
+Instead of:
+
+.. code-block:: python
+
+    from flask import Blueprint
+
+    blueprint = Blueprint('blueprint_page', __name__, template_folder='templates'))
+
+    @blueprint.route('/test')
+    def test():
+        pass
+
+You just import ``Blueprint`` from ``flask_occam``:
+
+.. code-block:: python
+
+    from flask_occam import Blueprint
+
+    blueprint = Blueprint('blueprint_page', __name__, template_folder='templates'))
+
+    @blueprint.route('/test')
+    def test():
+        pass
+
+Otherwise, the developer experience is the exact same.
+
 
 Decorators
 ----------
