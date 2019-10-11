@@ -354,7 +354,7 @@ Here's an example of using the **ActionHandler** helper class for processing end
 URL Processors
 --------------
 
-Above, we alluded to a custom url processor that automatically queries for objects of class ``Item`` ...
+Above, we alluded to a custom url processor that automatically queries for objects of class ``Item``. This section will cover that functionality with additional context.
 
 Without this URL processor, querying for the item and checking if it exists creates boilerplate that permeates the entire codebase:
 
@@ -429,6 +429,44 @@ Decorators
 +++++++++++++
 
 With any large-scale web application, establishing a client-server contract for requests is incredibly important for keeping development organized and code clean. This extension provides a mechanism for ...
+
+
+You could make payload validation as simple as types:
+
+.. code-block:: python
+
+    @api.route()
+    @validate(
+        string_param=str,
+        int_param=int,
+        float_param=float
+    )
+    def get_item():
+        pass
+
+You can also use this decorator on API functions, if you want to structure your application to dispatch to specific functions instead of including processing logic in the request handler. The ``@validate`` decorator will check all function arguments according to their expected contract:
+
+.. code-block:: python
+
+    @validate(
+        string_param=str,
+        int_param=int,
+        float_param=float
+    )
+    def process_item(string_param, int_param, float_param):
+        pass
+
+
+When calling this function, if the inputs aren't specified according to the validation rules, and explicit error will be raised:
+
+.. code-block:: python
+
+    >>> process_item('test', 'test', 'test')
+    Invalid arguments specified. Errors:
+
+        INCLUDE ERRORS HERE
+
+
 
 
 ``@log``
