@@ -431,7 +431,7 @@ Decorators
 With any large-scale web application, establishing a client-server contract for requests is incredibly important for keeping development organized and code clean. This extension provides a mechanism for ...
 
 
-You could make payload validation as simple as types:
+You could make payload validation as simple as built-in types:
 
 .. code-block:: python
 
@@ -444,7 +444,7 @@ You could make payload validation as simple as types:
     def get_item():
         pass
 
-You can also use this decorator on API functions, if you want to structure your application to dispatch to specific functions instead of including processing logic in the request handler. The ``@validate`` decorator will check all function arguments according to their expected contract:
+You can also use this decorator on API functions, if you want to structure your application so that request handling is dispatched to API functions. The ``@validate`` decorator will check all function arguments according to their expected contract:
 
 .. code-block:: python
 
@@ -467,11 +467,67 @@ When calling this function, if the inputs aren't specified according to the vali
         TODO: INCLUDE ERRORS HERE
 
 
+In addition to supporting built-in types, the ``@validate`` decorator also supports validators from the `WTForms <https://wtforms.readthedocs.io/en/stable/validators.html>`_ library. For example, to create custom validators for an email and password (with confirmation), you can do something like the following:
+
+.. code-block:: python
+
+    from wtforms import Form, StringField, PasswordField, validators
+
+    # defining validators
+    email = StringField('Email Address', [
+        validators.DataRequired(),
+        validators.Email(),
+    ])
+    password = PasswordField('Password', [
+        validators.DataRequired(),
+        validators.Length(min=4, max=25),
+        validators.EqualTo('confirm', message='Passwords must match.')
+    ])
+    confirm = PasswordField('Confirmation')
+
+    # endpoint
+    @validate(
+        email=email,
+        password=password,
+        confirm=confirm
+    )
+    @app.route('/login', methods=['GET'])
+    def login():
+        pass
+
+
+In this example, whenever the ``/login`` endpoint is hit with a payload, the ``@validate`` decorator will automatically check if the data contains a valid email, and a password between 4 and 25 characters with a matching confirmation. 
+
+Finally, if you want to configure your form object separately, you can do so. Here's an example of using the ``@validate`` decorator with a ``Form`` object directly:
+
+.. code-block:: python
+
+    from wtforms import Form
+
+    # form
+    class LoginForm(Form):
+        email = StringField('Email Address', [
+            validators.DataRequired(),
+            validators.Email(),
+        ])
+        password = PasswordField('Password', [
+            validators.DataRequired(),
+            validators.Length(min=4, max=25),
+            validators.EqualTo('confirm', message='Passwords must match.')
+        ])
+        confirm = PasswordField('Confirmation')
+
+    # endpoint
+    @validate(LoginForm)
+    @app.route('/login', methods=['GET'])
+    def login():
+        pass
 
 
 ``@log``
 ++++++++
 
+Logging in flask is already dead-simple, and this decorator mainly just provides an orthogonal route to doing logging in a consistent way.
 
 
 
