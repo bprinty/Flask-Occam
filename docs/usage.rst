@@ -527,27 +527,113 @@ Finally, if you want to configure your form object separately, you can do so. He
 ``@log``
 ++++++++
 
-Logging in flask is already dead-simple, and this decorator mainly just provides an orthogonal route to doing logging in a consistent way.
+Logging in flask is already dead-simple, and this decorator mainly just provides an orthogonal route to doing logging in a consistent way. With the ``@log`` decorator from this package, you can define high-level logging after an endpoint or API method is called, specifying the log information to the decorator:
+
+.. code-block:: python
+
+    @log.info('my_function was called')
+    def my_function():
+        pass
+
+
+In addition, strings in logging are automatically formatted with function arguments and payload arguments, so you can include string formatting with keywords in the log directly:
+
+.. code-block:: python
+
+    @log.info("Created item with name {name}")
+    def create_item(name):
+        pass
+
+
+If your application is configured to use ``Flask-Login``, you can include user information in the logs as well:
+
+.. code-block:: python
+
+    @log.debug("User {user.name} created item with name {name}")
+    def create_item(name):
+        pass
 
 
 
 ``@paginate``
 +++++++++++++
 
+Applications serving lots of data often need a mechanism for paginating requests, so that the server doesn't get overloaded trying to generate a response for a 
+
+
 
 ``@transactional``
 ++++++++++++++++++
+
+The ``@transactional`` decorator is 
 
 
 SQLAlchemy Extensions
 ---------------------
 
+Similarly to the ``@log`` decorator, this module simply provides an orthogonal mechanism for interacting with the database outside of heavily utilizing ``db.session`` from ``Flask-SQLAlchemy``. However, this type of usage is in no way required, and you can continue to use ``db.session`` if that's the way you prefer to interact with the database. Here are some examples of CRUD operations using the extensions:
+
+.. code-block:: python
+
+
+    ## Create 
+    # before
+    item = Item(
+        name='test',
+        url='http://localhost:5000/items/1'
+    )
+    db.session.add(item)
+
+    # after
+    item = Item.create(
+        name='test'
+        url='http://localhost:5000/items/1'
+    )
+
+    ## Read
+    # before
+    item = db.session.query(Item).filter_by(id=1).first()
+    items = db.session.query(Item).limit(5).offset(5).all()
+
+    # after
+    item = Item.get(1)
+    items = Item.all(limit=5, offset=5)
+
+    ## Update
+    # before
+    item.name = 'test2'
+    item.url = None
+    db.session.add(item)
+
+    # after
+    item.update(name='test2', url=None)
+
+    ## Delete 
+    # before
+    db.session.delete(item)
+
+    # after
+    item.delete()
+
+
+To enable these extensions when using the plugin, developers must instantiate the ``Flask-Occum`` with a reference to the ``Flask-SQLAlchemy`` plugin. Here's an example of doing this:
+
+.. code-block:: python
+
+    app = Flask(__name__)
+    app.config.from_object(Config)
+    db = SQLAlchemy(app)
+    occam = Occam(app, db)
+
+
+However, as previously stated, passing in the Flask-SQLAlchemy plugin instance is not required to use the tools in this extension. 
+
 
 Configuration
 -------------
 
-The following configuration values exist for Flask-Authorize.
-Flask-Authorize loads these values from your main Flask config which can
+The following configuration values exist for Flask-Occam.
+Flask-Occam loads these values from your main Flask config which can
 be populated in various ways. Note that some of those cannot be modified
 after the database engine was created so make sure to configure as early as
 possible and to not modify them at runtime.
@@ -562,6 +648,9 @@ A list of configuration keys currently understood by the extension:
 ================================== =========================================
 ``PLUGIN_DEFAULT_VARIABLE``        A variable used in the plugin for
                                    something important.
+``OCCAM_LOG_USER_FORMAT``          The name of the ``current_user`` available
+                                   when using the ``@log`` decorator. Defaults
+                                   to ``user``.
 ================================== =========================================
 
 
