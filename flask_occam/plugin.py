@@ -18,14 +18,12 @@ class Occam(object):
     routing.
     """
 
-    def __init__(self, app=None, gather_models=False):
-        self.gather_models = gather_models
+    def __init__(self, app=None):
         if app is not None:
             self.init_app(app)
         return
 
     def init_app(self, app):
         self.app = app
-        self.app.config.setdefault('PLUGIN_DEFAULT_VARIABLE', False)
         self.app.config.setdefault('OCCAM_LOG_USER_FORMAT', 'user')
         return
