@@ -17,6 +17,11 @@ from flask import request, current_app, Response
 from wtforms import Form
 from .errors import ValidationError
 
+try:
+    from flask_login import current_user
+except:
+    current_user = None
+
 
 # function decorators
 # -------------------
@@ -45,6 +50,7 @@ class log(object):
             varnames = inspect.getargspec(func)[0]
             data.update(dict(zip(varnames, args)))
             data = {k: v for k, v in data.items() if k not in ['cls', 'self']}
+            data.setdefault(current_app.config['OCCAM_LOG_USER_FORMAT'], current_user)
             logger(self.msg.format(**data, kwargs=kwargs))
             return func(*args, **kwargs)
         return inner

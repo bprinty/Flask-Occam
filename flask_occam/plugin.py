@@ -27,4 +27,5 @@ class Occam(object):
     def init_app(self, app):
         self.app = app
         self.app.config.setdefault('PLUGIN_DEFAULT_VARIABLE', False)
+        self.app.config.setdefault('OCCAM_LOG_USER_FORMAT', 'user')
         return
