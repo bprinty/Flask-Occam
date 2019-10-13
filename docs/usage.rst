@@ -354,9 +354,7 @@ Here's an example of using the **ActionHandler** helper class for processing end
 URL Processors
 --------------
 
-Above, we alluded to a custom url processor that automatically queries for objects of class ``Item``. This section will cover that functionality with additional context.
-
-Without this URL processor, querying for the item and checking if it exists creates boilerplate that permeates the entire codebase:
+Above, we alluded to a custom url processor that automatically queries for objects of class ``Item``. Without this URL processor, querying for the item and checking if it exists creates boilerplate that permeates the entire codebase:
 
 .. code-block:: python
 
@@ -368,32 +366,30 @@ Without this URL processor, querying for the item and checking if it exists crea
             raise NotFound     
         return item.json()
 
-With the URL processor, all of the querying and raising ``NotFound`` errors is automatically managed when a request comes in:
+
+With the URL processor included with this extension, all of the querying and raising ``NotFound`` errors is automatically managed when a request comes in:
 
 .. code-block:: python
 
     @app.route('/items/<id(Item):item>')
     def get_item(item):
-        # the ``item`` argument is automatically transformed
-        # into an ``Item`` object when an identifier is passed into
-        # the URL like before 
         return item.json()
 
-You can also do the same with any other object in the database. For example:
+When a request comes through, the ``item`` argument is automatically transformed into an ``Item`` object by the url processor, removing the need to always query the database and raise relevant errors. You can also do the same with any other object in the database. For example:
 
 .. code-block:: python
 
     @app.route('/users/<id(User):user>/items/<id(Item):item>')
     def get_user_item(user, item):
-        # Like before, ``user`` is a ``User`` object, and
-        # ``item`` is an ``Item`` object.
         pass
+
+Like before, ``user`` is transformed into is a ``User`` object, and ``item`` is transformed into an ``Item`` object. If neither object exists, a ``NotFound`` error will be raised.
 
 
 Using Blueprints
 ----------------
 
-Flask-Occum is designed for seamless integration with Flask, without changing much of how the app is configured or structured. The only Flask-y convention that needs to be slightly altered is how ``Blueprints`` are used.
+Flask-Occum is designed for seamlessly integrating with Flask, without changing much of how the app is configured or structured. The only Flask-y convention that needs to be slightly altered is how ``Blueprints`` are used.
 
 Instead of:
 
@@ -428,10 +424,9 @@ Decorators
 ``@validate``
 +++++++++++++
 
-With any large-scale web application, establishing a client-server contract for requests is incredibly important for keeping development organized and code clean. This extension provides a mechanism for ...
+With any large-scale web application, establishing a client-server contract for requests is incredibly important for keeping development organized and code clean. This extension provides a mechanism for defining endpoint contracts in a declarative way, which increases developer awareness of what's happening in the application, and reduces the need for boilerplate code to validate payload data.
 
-
-You could make payload validation as simple as built-in types:
+With the ``@validate`` decorator, you could make payload validation as simple as built-in types:
 
 .. code-block:: python
 
@@ -558,14 +553,62 @@ If your application is configured to use ``Flask-Login``, you can include user i
 ``@paginate``
 +++++++++++++
 
-Applications serving lots of data often need a mechanism for paginating requests, so that the server doesn't get overloaded trying to generate a response for a 
+Applications serving lots of data often need a mechanism for paginating requests, so that the server doesn't get overloaded with bulk requests. This plugin provides a decorator to automatically provide pagination information in the response header:
 
+.. code-block:: python
+
+    @app.route("/items", methods=['GET'])
+    @paginate(limit=50, total=Item.count)
+    def get_items(limit, offset):
+        items = Item.all(limit=limit, offset=offset)
+        return [item.json() for item in items], 200
+
+Arguments to the ``@paginate`` decorator are as follows:
+
+    * **limit** - The number of elements to paginate by.
+    * **total** - The total number of elements available in the database. This can be either a number or a ``callable``.
+
+
+Behind the scenes, this decorator will automatically set ``limit`` and ``offset`` function argument values, which developers can use when constructing a response. In the example above, if a request is made to ``/items``, ``limit`` will be set to 50, and ``offset`` will be set to 0. Response headers detailing the next request to make for more data will also automatically be set. See below for an example:
+
+.. code-block:: bash
+
+    ~$ curl -v -X GET http://localhost:5000/items
+    > GET /items HTTP/1.1
+    > User-Agent: curl/7.16.4 (i386-apple-darwin9.0) libcurl/7.16.4 OpenSSL/0.9.7l zlib/1.2.3
+    > Accept: */*
+    > 
+    < HTTP/1.1 206 Partial Content
+    < Content-Type: application/json; charset=UTF-8
+    < X-Total-Count: 55
+    < Link: <http://localhost:5000/items?limit=50&offset=1>; rel="next"
+    < 
+    [
+        {'id': 1, 'name': 'one'},
+        {'id': 2, 'name': 'two'}
+        ...
+    ]
+
+In addition to the ``X-Total-Count`` and ``Link`` header values, the decorator will also change the response code to ``206 Partial Content`` if the request is not the last request for retrieving data.   
 
 
 ``@transactional``
 ++++++++++++++++++
 
-The ``@transactional`` decorator is 
+The ``@transactional`` decorator is a tool for automatically managing transactions as requests are processed. If the application produces any error during a response, ``db.session.rollback()`` is automatically called before the request finishes processing:
+
+.. code-block:: python
+
+    @transactional
+    def do_something():
+        item = Item(name='test')
+        db.session.add(item)
+
+        item.url = 1 / 0  ## raises error, forcing a database rollback
+        return
+
+
+After the function executes, the flushed changes will also automatically be committed via ``db.session.commit()``. In total, the decorator doesn't provide much on top of what SQLAlchemy already provides, but gives developers a nice wrapper to keep their transactional code clean.
 
 
 SQLAlchemy Extensions
@@ -646,8 +689,6 @@ A list of configuration keys currently understood by the extension:
 .. tabularcolumns:: |p{6.5cm}|p{10cm}|
 
 ================================== =========================================
-``PLUGIN_DEFAULT_VARIABLE``        A variable used in the plugin for
-                                   something important.
 ``OCCAM_LOG_USER_FORMAT``          The name of the ``current_user`` available
                                    when using the ``@log`` decorator. Defaults
                                    to ``user``.
@@ -668,12 +709,19 @@ The code below details how you can override all of these configuration options:
 .. code-block:: python
 
     from flask import Flask
-    from flask_plugin import Plugin
-    from werkzeug.exceptions import HTTPException
+    from flask_occam import Occam
 
     app = Flask(__name__)
-    plugin = Plugin(option=True)
-    plugin.init_app(app)
+    occam = Occam(option=True)
+    occam.init_app(app)
+
+    # or, with model extensions
+    from flask_sqlalchemy import SQLAlchemy
+
+    app = Flask(__name__)
+    db = SQLAlchemy()
+    occam = Occam(db)
+    occam.init_app(app)
 
 
 For even more in-depth information on the module and the tools it provides, see the `API <./api.html>`_ section of the documentation.
