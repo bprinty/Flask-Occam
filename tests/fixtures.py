@@ -12,8 +12,8 @@ import factory
 from flask import Flask, request, jsonify
 from werkzeug.exceptions import NotFound
 from flask_sqlalchemy import SQLAlchemy
-from flask_occam import Occam, ActionHandler, transactional, validate
-from wtforms import validators, StringField
+from flask_occam import Occam, ActionHandler, transactional, validate, optional
+from wtforms import validators, BooleanField
 
 from . import SANDBOX
 
@@ -37,9 +37,8 @@ occam = Occam(app)
 
 # validators
 # ----------
-email = StringField('Email Address', [
+boolean = BooleanField('Boolean', [
     validators.DataRequired(),
-    validators.Email(),
 ])
 
 
@@ -52,6 +51,7 @@ class Items(object):
         items = Item.all()
         return jsonify([dict(id=x.id, name=x.name) for x in items]), 200
 
+    @validate(name=str)
     @transactional
     def post(self):
         item = Item.create(**request.json)
@@ -59,13 +59,13 @@ class Items(object):
 
 
 @app.route('/items/<id(Item):item>')
-class Item(object):
+class ItemUpdates(object):
     def get(self, item):
         return jsonify(id=item.id, name=item.name), 200
 
     @validate(
-        name=str,
-        email=validators.email
+        name=optional(str),
+        ok=optional(boolean)
     )
     @transactional
     def put(self, item):
@@ -78,8 +78,8 @@ class Item(object):
         return
 
 
- @app.route('items/<id(Item):item>/<action>')
- class Item(ActionHandler):
+@app.route('/items/<id(Item):item>/<action>')
+class ItemActions(ActionHandler):
 
     @transactional
     def archive(self):
@@ -100,8 +100,7 @@ class Item(db.Model):
     # basic
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False, unique=True, index=True)
-    email = db.Column(db.String(255))
-    archived = db.Column(db.Boolean)
+    ok = db.Column(db.Boolean)
 
 
 # factories
@@ -110,6 +109,7 @@ class ItemFactory(factory.alchemy.SQLAlchemyModelFactory):
 
     id = factory.Sequence(lambda x: x + 100)
     name = factory.Faker('name')
+    ok = True
 
     class Meta:
         model = Item
