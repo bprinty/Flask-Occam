@@ -51,7 +51,8 @@ class log(object):
             data.update(dict(zip(varnames, args)))
             data = {k: v for k, v in data.items() if k not in ['cls', 'self']}
             data.setdefault(current_app.config['OCCAM_LOG_USER_FORMAT'], current_user)
-            logger(self.msg.format(**data, kwargs=kwargs))
+            data.setdefault('kwargs', kwargs)
+            logger(self.msg.format(**data))
             return func(*args, **kwargs)
         return inner
 
@@ -191,6 +192,38 @@ def create_validator(typ):
         raise AssertionError('No rule for validating on type {}'.format(typ))
 
     return mapper.get(typ.__name__)(typ.__name__, [validators.DataRequired()])
+
+
+def optional(field):
+    """
+    Replace DataRequired validtion scheme with Optional
+    validation scheme.
+
+    Args:
+        field (Field): Field to process validation options for.
+    """
+    # parse types as inputs
+    if not isinstance(field, (Field, UnboundField)):
+        field = create_validator(field)
+
+    # # check for field list
+    # field_list = isinstance(field, (list, tuple))
+    # if field_list:
+    #     field = field[0]
+
+    # re-process field
+    if len(field.args) < 2:
+        raise AssertionError('Validator must have associated name and validation scheme (2 arguments)')
+    name = field.args[0]
+    checks = list(filter(
+        lambda x: not isinstance(x, validators.DataRequired),
+        field.args[1]
+    ))
+    checks.insert(0, validators.Optional())
+    obj = field.field_class(name, checks)
+
+    # return field or field list based on input
+    return obj # if not field_list else [obj]
 
 
 def validate(*vargs, **vkwargs):
