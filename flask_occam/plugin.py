@@ -7,7 +7,7 @@
 
 # imports
 # -------
-# ...
+from .converters import ModelConverter
 
 
 # plugin
@@ -26,4 +26,5 @@ class Occam(object):
     def init_app(self, app):
         self.app = app
         self.app.config.setdefault('OCCAM_LOG_USER_FORMAT', 'user')
+        self.app.url_map.converters['id'] = ModelConverter
         return
