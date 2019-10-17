@@ -32,7 +32,7 @@ class Config(object):
 app = Flask(__name__)
 app.config.from_object(Config)
 db = SQLAlchemy(app)
-occam = Occam(app)
+occam = Occam(app, db)
 
 
 # validators
