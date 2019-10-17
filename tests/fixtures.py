@@ -30,9 +30,11 @@ class Config(object):
 
 
 app = Flask(__name__)
+print(app.route)
 app.config.from_object(Config)
 db = SQLAlchemy(app)
 occam = Occam(app, db)
+print(app.route)
 
 
 # validators
@@ -55,7 +57,7 @@ class Items(object):
     @transactional
     def post(self):
         item = Item.create(**request.json)
-        return jsonify(id=item.id, name=item.name), 200
+        return jsonify(id=item.id, name=item.name), 201
 
 
 @app.route('/items/<id(Item):item>')
@@ -75,7 +77,7 @@ class ItemUpdates(object):
     @transactional
     def delete(self, item):
         item.delete()
-        return
+        return jsonify(msg='Deleted item'), 204
 
 
 @app.route('/items/<id(Item):item>/<action>')
@@ -123,9 +125,9 @@ def items(client):
 
     # roles
     items = [
-        ItemFactory.create(name='one'),
-        ItemFactory.create(name='two'),
-        ItemFactory.create(name='three')
+        ItemFactory.create(id=1, name='one'),
+        ItemFactory.create(id=2, name='two'),
+        ItemFactory.create(id=3, name='three')
     ]
 
     yield items
