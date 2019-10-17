@@ -86,12 +86,19 @@ class ItemActions(ActionHandler):
     @transactional
     def archive(self):
         item.archived = True
-        return
+        return jsonify(msg='Archived item'), 200
 
     @transactional
     def unarchive(self):
         item.archived = False
-        return
+        return jsonify(msg='Unarchived item'), 200
+
+
+@app.route('/items/<id(Item):item>/<action>')
+class ItemQueries(QueryHandler):
+
+    def status(self, item):
+        return jsonify(archived=item.archived), 200
 
 
 # models
