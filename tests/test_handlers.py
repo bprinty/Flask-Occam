@@ -67,3 +67,12 @@ class TestCRUD(object):
         response = client.get('/items/{}'.format(item.id))
         assert response.status_code == 404
         return
+
+
+class TestActionHandler(object):
+    pass
+
+
+class TestQueryHandler(object):
+    pass
+
