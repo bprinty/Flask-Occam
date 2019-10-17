@@ -8,81 +8,62 @@
 # imports
 # -------
 import pytest
-from flask_occam import validate, optional
-from wtforms import Form, StringField, BooleanField, PasswordField, validators
-
 from .fixtures import ItemFactory
 
-from flask_occam.errors import ValidationError
 
+# tests
+# -----
+class TestCRUD(object):
 
-# validators
-# ----------
-# @validate(
-#     one=str, two=float, three=optional(int),
-#     four=dict(
-#         foo=str,
-#         bar=str,
-#     ), five=[str]
-# )
-# def validate_types():
-#     pass
-
-
-# @validate(
-#     field=validators.BooleanField(),
-#     validator=StringField('Boolean', [
-#         validators.DataRequired(),
-#         validators.BooleanField(),
-#     ]),
-#     optional=optional(validators.BooleanField())
-# )
-# def validate_validators():
-#     pass
-
-
-class ValidateForm(Form):
-    boolean = BooleanField('Boolean', [
-        validators.DataRequired(),
-    ])
-
-@validate(ValidateForm)
-def validate_form(boolean):
-    pass
-
-
-# validation tests
-# ----------------
-class TestValidateHandler(object):
-
-    def test_integration(self, client):
-        item = ItemFactory.create(name='test')
-        response = client.put('/items/{}'.format(item.id), json=dict(
-            name=1,
-            email='email@localhost.com'
+    def test_create(self, client, items):
+        # create it
+        response = client.post('/items', json=dict(
+            name='create'
         ))
-        print(response.json)
+        assert response.status_code == 201
+        assert response.json['name'] == 'create'
+
+        # read it back
+        response = client.get('/items/{}'.format(response.json['id']))
+        assert response.status_code == 200
+        assert response.json['name'] == 'create'
         return
 
-    # def test_validate_types(self, client, items):
-    #     response = client.get('/items/{}'.format(items[0].id))
-    #     assert response.status_code == 200
-    #     assert response.json['name'] == items[0].name
-    #     return
-
-    def test_validate_form(self, client):
-        # raises error
-        with pytest.raises(ValidationError):
-            validate_form(boolean='test')
-
-        # no error
-        assert validate_form(boolean=True) is None
+    def test_read(self, client, items):
+        response = client.get('/items/{}'.format(items[0].id))
+        assert response.status_code == 200
+        assert response.json['name'] == items[0].name
         return
 
-    # def test_query_new(self, client):
-    #     # other open read permissions
-    #     item = ItemFactory.create(name='test')
-    #     response = client.get('/items/{}'.format(item.id))
-    #     assert response.status_code == 200
-    #     assert response.json['name'] == 'test'
-    #     return
+    def test_update(self, client):
+        item = ItemFactory.create(name='update')
+        
+        # update it
+        response = client.put('/items/{}'.format(item.id), json=dict(
+            name='not update'
+        ))
+        assert response.status_code == 200
+        assert response.json['name'] == 'not update'
+
+        # read it back
+        response = client.get('/items/{}'.format(item.id))
+        assert response.status_code == 200
+        assert response.json['name'] == 'not update'
+        return
+
+    def test_delete(self, client):
+        item = ItemFactory.create(name='delete')
+
+        # make sure it's there
+        response = client.get('/items/{}'.format(item.id))
+        assert response.status_code == 200
+        assert response.json['name'] == 'delete'
+
+        # drop it
+        response = client.delete('/items/{}'.format(item.id))
+        assert response.status_code == 204
+
+        # check if it's still there
+        response = client.get('/items/{}'.format(item.id))
+        assert response.status_code == 404
+        return
