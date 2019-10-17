@@ -11,6 +11,7 @@ from flask import Flask
 
 from .converters import ModelConverter
 from .mixins import ModelMixin
+from .errors import ValidationError
 
 
 # plugin
@@ -43,6 +44,7 @@ class Occam(object):
         self.app = app
         self.app.config.setdefault('OCCAM_LOG_USER_FORMAT', 'user')
         self.app.url_map.converters['id'] = ModelConverter
+        self.app.register_error_handler(ValidationError, ValidationError.handler)
         return
 
     def init_db(self, db):

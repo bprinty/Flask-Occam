@@ -315,7 +315,7 @@ def validate(*vargs, **vkwargs):
             # check for empty payload
             if not data:
                 if in_request:
-                    raise ExpectationFailed(_('No request payload specified.'))
+                    raise ExpectationFailed('No request payload specified.')
                 else:
                     raise AssertionError('No arguments specified.')
 
@@ -323,7 +323,7 @@ def validate(*vargs, **vkwargs):
             form = Validator(data=data)
             if not form.validate():
                 if in_request:
-                    raise ValidationError(_('Invalid request payload.'), form.errors)
+                    raise ValidationError('Invalid request payload.', form.errors)
                 else:
                     errors = yaml.dump(form.errors).replace('\n', '\n  ') + '\n'
                     raise ValueError('Invalid arguments specified. Errors: {}'.format(errors))
