@@ -23,8 +23,8 @@ except:
     current_user = None
 
 
-# function decorators
-# -------------------
+# logging
+# -------
 class log(object):
     """
     Decorator for adding default logging functionality
@@ -78,6 +78,8 @@ class log(object):
         return cls(msg, level='critical')
 
 
+# pagination
+# ----------
 def paginate(**options):
     """
     Enable request pagination.
@@ -153,7 +155,8 @@ def paginate(**options):
 
 
 
-
+# validation
+# ----------
 from wtforms.fields.core import UnboundField, Field
 from wtforms.fields.core import UnboundField, Field
 from wtforms import FieldList
@@ -161,8 +164,6 @@ from wtforms import StringField, PasswordField, IntegerField
 from wtforms import BooleanField, FloatField, DateField, DateTimeField
 from wtforms import validators
 
-# helpers
-# -------
 def create_validator(typ):
     """
     Create validator from type object, using common
@@ -333,6 +334,8 @@ def validate(*vargs, **vkwargs):
     return decorator
 
 
+# db-related
+# ----------
 def transactional(func):
     @wraps(func)
     def inner(*args, **kwargs):

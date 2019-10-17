@@ -15,37 +15,38 @@ from .fixtures import ItemFactory
 
 # validators
 # ----------
-@validate(
-    one=str, two=float, three=optional(int),
-    four=dict(
-        foo=str,
-        bar=str,
-    ), five=[str]
-)
-def validate_types():
-    pass
-
-@validate(
-    field=validators.BooleanField(),
-    validator=StringField('Boolean', [
-        validators.DataRequired(),
-        validators.BooleanField(),
-    ]),
-    optional=optional(validators.BooleanField())
-)
-def validate_validators():
-    pass
+# @validate(
+#     one=str, two=float, three=optional(int),
+#     four=dict(
+#         foo=str,
+#         bar=str,
+#     ), five=[str]
+# )
+# def validate_types():
+#     pass
 
 
-class ValidateForm(Form):
-    boolean = StringField('Boolean', [
-        validators.DataRequired(),
-        validators.BooleanField(),
-    ])
+# @validate(
+#     field=validators.BooleanField(),
+#     validator=StringField('Boolean', [
+#         validators.DataRequired(),
+#         validators.BooleanField(),
+#     ]),
+#     optional=optional(validators.BooleanField())
+# )
+# def validate_validators():
+#     pass
 
-@validate(ValidateForm)
-def validate_form():
-    pass
+
+# class ValidateForm(Form):
+#     boolean = StringField('Boolean', [
+#         validators.DataRequired(),
+#         validators.BooleanField(),
+#     ])
+
+# @validate(ValidateForm)
+# def validate_form():
+#     pass
 
 
 # validation tests
