@@ -33,7 +33,11 @@ class log(object):
 
     def __init__(self, msg, level=None):
         self.msg = msg
-        self.level = 'info' if not level else level
+        if current_app:
+            default = current_app.config['OCCAM_LOG_DEFAULT_LEVEL']
+        else:
+            default = 'info'
+        self.level = default if not level else level
         return
 
     def __call__(self, func):
@@ -47,7 +51,7 @@ class log(object):
         @wraps(func)
         def inner(*args, **kwargs):
             data = kwargs.copy()
-            varnames = inspect.getargspec(func)[0]
+            varnames = list(inspect.signature(func).parameters.keys())
             data.update(dict(zip(varnames, args)))
             data = {k: v for k, v in data.items() if k not in ['cls', 'self']}
             data.setdefault(current_app.config['OCCAM_LOG_USER_FORMAT'], current_user)
