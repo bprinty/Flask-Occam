@@ -7,8 +7,10 @@
 
 # imports
 # -------
+import io
 import pytest
 import factory
+import logging
 from flask import Flask, request, jsonify
 from werkzeug.exceptions import NotFound
 from flask_sqlalchemy import SQLAlchemy
@@ -29,12 +31,16 @@ class Config(object):
     PLUGIN_DEFAULT_VARIABLE = True
 
 
+logs = io.StringIO()
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+capture = logging.StreamHandler(logs)
 app = Flask(__name__)
-print(app.route)
+logger.addHandler(capture)
+app.logger.addHandler(capture)
 app.config.from_object(Config)
 db = SQLAlchemy(app)
 occam = Occam(app, db)
-print(app.route)
 
 
 # validators
