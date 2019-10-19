@@ -51,19 +51,19 @@ class Items(object):
 
     def get(self):
         items = Item.all()
-        return jsonify([dict(id=x.id, name=x.name) for x in items]), 200
+        return jsonify([x.json() for x in items]), 200
 
     @validate(name=str)
     @transactional
     def post(self):
         item = Item.create(**request.json)
-        return jsonify(id=item.id, name=item.name), 201
+        return jsonify(item.json()), 201
 
 
 @app.route('/items/<id(Item):item>')
 class ItemUpdates(object):
     def get(self, item):
-        return jsonify(id=item.id, name=item.name), 200
+        return jsonify(item.json()), 200
 
     @validate(
         name=optional(str),
@@ -72,33 +72,12 @@ class ItemUpdates(object):
     @transactional
     def put(self, item):
         item.update(**request.json)
-        return jsonify(id=item.id, name=item.name), 200
+        return jsonify(item.json()), 200
 
     @transactional
     def delete(self, item):
         item.delete()
         return jsonify(msg='Deleted item'), 204
-
-
-@app.route('/items/<id(Item):item>/<action>')
-class ItemActions(ActionHandler):
-
-    @transactional
-    def archive(self):
-        item.archived = True
-        return jsonify(msg='Archived item'), 200
-
-    @transactional
-    def unarchive(self):
-        item.archived = False
-        return jsonify(msg='Unarchived item'), 200
-
-
-@app.route('/items/<id(Item):item>/<action>')
-class ItemQueries(QueryHandler):
-
-    def status(self, item):
-        return jsonify(archived=item.archived), 200
 
 
 # models
@@ -109,7 +88,14 @@ class Item(db.Model):
     # basic
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False, unique=True, index=True)
-    ok = db.Column(db.Boolean)
+    archived = db.Column(db.Boolean)
+
+    def json(self):
+        return dict(
+            id=self.id,
+            name=self.name,
+            archived=self.archived
+        )
 
 
 # factories
@@ -118,7 +104,7 @@ class ItemFactory(factory.alchemy.SQLAlchemyModelFactory):
 
     id = factory.Sequence(lambda x: x + 100)
     name = factory.Faker('name')
-    ok = True
+    archived = False
 
     class Meta:
         model = Item
