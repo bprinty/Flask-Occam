@@ -124,6 +124,7 @@ class Occam(object):
         self.app = app
         self.app.route = types.MethodType(route, self.app)
         self.app.config.setdefault('OCCAM_LOG_USER_FORMAT', 'user')
+        self.app.config.setdefault('OCCAM_LOG_DEFAULT_LEVEL', 'info')
         self.app.url_map.converters['id'] = ModelConverter
         self.app.register_error_handler(ValidationError, ValidationError.handler)
         return
