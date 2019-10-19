@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Testing for pl
+# Testing for url handling.
 #
 # ------------------------------------------------
 
@@ -8,7 +8,33 @@
 # imports
 # -------
 import pytest
-from .fixtures import ItemFactory
+from flask import jsonify
+
+from flask_occam import transactional, ActionHandler, QueryHandler
+from .fixtures import app, ItemFactory
+
+
+# handlers
+# --------
+@app.route('/items/<id(Item):item>/<action>')
+class ItemActions(ActionHandler):
+
+    @transactional
+    def archive(self, item):
+        item.archived = True
+        return jsonify(msg='Archived item'), 204
+
+    @transactional
+    def unarchive(self, item):
+        item.archived = False
+        return jsonify(msg='Unarchived item'), 204
+
+
+@app.route('/items/<id(Item):item>/<query>')
+class ItemQueries(QueryHandler):
+
+    def status(self, item):
+        return jsonify(archived=item.archived), 200
 
 
 # tests
@@ -37,7 +63,7 @@ class TestCRUD(object):
 
     def test_update(self, client):
         item = ItemFactory.create(name='update')
-        
+
         # update it
         response = client.put('/items/{}'.format(item.id), json=dict(
             name='not update'
@@ -69,10 +95,21 @@ class TestCRUD(object):
         return
 
 
-class TestActionHandler(object):
-    pass
+class TestHandlers(object):
 
+    def test_action_handler(self, client, items):
+        response = client.get('/items/{}'.format(items[0].id))
+        assert response.json['archived'] is False
 
-class TestQueryHandler(object):
-    pass
+        response = client.post('/items/{}/archive'.format(items[0].id))
+        assert response.status_code == 204
 
+        response = client.get('/items/{}'.format(items[0].id))
+        assert response.json['archived'] is True
+        return
+
+    def test_query_handler(self, client, items):
+        response = client.get('/items/{}/status'.format(items[1].id))
+        assert response.status_code == 200
+        assert response.json['archived'] is False
+        return
