@@ -13,7 +13,7 @@ import logging
 from functools import wraps
 from werkzeug.exceptions import ExpectationFailed
 from werkzeug.datastructures import ImmutableMultiDict
-from flask import request, current_app, Response
+from flask import request, current_app, Response, has_request_context
 from wtforms import Form
 from .errors import ValidationError
 
@@ -196,7 +196,8 @@ def create_validator(typ):
     if typ.__name__ not in mapper:
         raise AssertionError('No rule for validating on type {}'.format(typ))
 
-    return mapper.get(typ.__name__)(typ.__name__, [validators.DataRequired()])
+    field = mapper.get(typ.__name__)
+    return field(field.__name__, [validators.DataRequired()])
 
 
 def optional(field):
@@ -281,6 +282,7 @@ def validate(*vargs, **vkwargs):
     TODO: INCLUDE PLACE FOR DOCUMENTATION URL IN REQUEST?
 
     """
+    print(vargs, vkwargs)
 
     # validator class
     if len(vargs):
@@ -292,6 +294,7 @@ def validate(*vargs, **vkwargs):
             pass
         for kw in vkwargs:
             if not isinstance(vkwargs[kw], (Field, UnboundField)):
+                print(kw, vkwargs[kw])
                 vkwargs[kw] = create_validator(vkwargs[kw])
             setattr(CustomValidator, kw, vkwargs[kw])
         Validator = CustomValidator
@@ -303,7 +306,7 @@ def validate(*vargs, **vkwargs):
     def decorator(func):
         @wraps(func)
         def inner(*args, **kwargs):
-            in_request = bool(request)
+            in_request = has_request_context()
 
             # parse payload data from request or function arguments
             if in_request:
@@ -312,7 +315,7 @@ def validate(*vargs, **vkwargs):
                     data = data.to_dict()
             else:
                 data = kwargs.copy()
-                varnames = inspect.getargspec(func)[0]
+                varnames = list(inspect.signature(func).parameters.keys())
                 data.update(dict(zip(varnames, args)))
                 data = {k: v for k, v in data.items() if k not in ['cls', 'self']}
 

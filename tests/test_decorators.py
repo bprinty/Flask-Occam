@@ -61,15 +61,17 @@ class TestLogDecorator(object):
 
 # validate
 # --------
-# @validate(
-#     one=str, two=float, three=optional(int),
-#     four=dict(
-#         foo=str,
-#         bar=str,
-#     ), five=[str]
-# )
-# def validate_types():
-#     pass
+@validate(
+    one=str, two=float,
+    three=optional(int),
+    four=optional(dict(
+        foo=str,
+        bar=str,
+    )),
+    five=optional([str])
+)
+def validate_types():
+    pass
 
 
 # @validate(
@@ -85,13 +87,17 @@ class TestLogDecorator(object):
 
 
 class ValidateForm(Form):
+    string = StringField('String', [
+        validators.DataRequired(),
+        validators.Length(min=3, max=10)
+    ])
     boolean = BooleanField('Boolean', [
         validators.DataRequired(),
     ])
 
 
 @validate(ValidateForm)
-def validate_form(boolean):
+def validate_form(string, boolean):
     pass
 
 
@@ -99,28 +105,47 @@ def validate_form(boolean):
 # --------------
 class TestValidateDecorator(object):
 
-    # def test_integration(self, client):
-    #     item = ItemFactory.create(name='test')
-    #     response = client.put('/items/{}'.format(item.id), json=dict(
-    #         name=1,
-    #         email='email@localhost.com'
-    #     ))
-    #     print(response.status_code)
-    #     return
+    def test_integration(self, client):
+        item = ItemFactory.create(name='test')
+        response = client.put('/items/{}'.format(item.id), json=dict(
+            name=1
+        ))
+        assert response.status_code == 422
+        print(response.json)
+        return
 
-    # def test_validate_types(self, client, items):
-    #     response = client.get('/items/{}'.format(items[0].id))
-    #     assert response.status_code == 200
-    #     assert response.json['name'] == items[0].name
-    #     return
+    def test_validate_types(self):
+        from flask import _request_ctx_stack
+        _request_ctx_stack.pop()
 
-    def test_validate_form(self, client):
+        # no exception
+        validate_types(one='test', two=1.5)
+        validate_types(one='test', two=1.5, three=1, four=dict(foo='foo', bar='bar'), five=['one', 'two'])
+
+        # non-optional
+        with pytest.raises(ValueError) as exc:
+            validate_types(one=1, two='test')
+            # assert one, two wrong
+            print(exc.message)
+
+        # optional
+        with pytest.raises(ValueError) as exc:
+            validate_types(one=1, two='test', three='test', four=dict(foo=1, bar='bar'), five=[1, 2])
+            # assert one, two, three, four.foo, and five wrong
+            print(exc.message)
+
+        return
+
+    def test_validate_form(self):
+        from flask import _request_ctx_stack
+        _request_ctx_stack.pop()
+
         # raises error
-        with pytest.raises(ValidationError):
-            validate_form(boolean='test')
+        with pytest.raises(ValueError):
+            validate_form(string='a', boolean='test')
 
         # no error
-        assert validate_form(boolean=True) is None
+        assert validate_form(string='test', boolean=True) is None
         return
 
     # def test_query_new(self, client):
