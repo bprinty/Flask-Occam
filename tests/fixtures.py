@@ -73,7 +73,6 @@ class ItemUpdates(object):
 
     @validate(
         name=optional(str),
-        ok=optional(boolean)
     )
     @transactional
     def put(self, item):
