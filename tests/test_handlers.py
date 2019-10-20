@@ -113,3 +113,15 @@ class TestHandlers(object):
         assert response.status_code == 200
         assert response.json['archived'] is False
         return
+
+
+class TestAutoDocumentation(object):
+
+    def test_get_doc(self, client, items):
+        response = client.get('/docs/items')
+        assert response.status_code == 200
+        assert 'testing auto documentation' in response.data.decode('utf-8')
+
+        response = client.get('/docs/items/1')
+        assert response.status_code == 204
+        return

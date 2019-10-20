@@ -57,6 +57,11 @@ class Items(object):
 
     @paginate(limit=2, total=lambda: Item.count())
     def get(self):
+        """
+        GET /items
+
+        Docstrings used in testing auto documentation
+        """
         items = Item.all(
             limit=request.args['limit'],
             offset=request.args['offset']
@@ -66,6 +71,11 @@ class Items(object):
     @validate(name=str)
     @transactional
     def post(self):
+        """
+        POST /items
+
+        Docstrings used in testing auto documentation
+        """
         item = Item.create(**request.json)
         return item.json(), 201
 
