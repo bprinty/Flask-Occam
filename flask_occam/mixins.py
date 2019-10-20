@@ -96,6 +96,13 @@ class ModelMixin(object):
         return
 
     @classmethod
+    def all(cls, limit=None, offset=0):
+        """
+        Return all data with specified limit and offset
+        """
+        return cls.find(limit=limit, offset=offset)
+
+    @classmethod
     def find(cls, limit=None, offset=0, **filters):
         """
         Search database with specified limit, offset,
