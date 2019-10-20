@@ -7,7 +7,7 @@
 
 # imports
 # -------
-from flask import Flask, Blueprint
+from flask import Flask, Blueprint, current_app, request
 import types
 
 from .converters import ModelConverter
@@ -103,7 +103,7 @@ class Occam(object):
 
     def __init__(self, app=None, db=None):
         self.Blueprint = Blueprint
-        
+
         # arg mismatch
         if app is not None and \
            db is None and \
@@ -114,7 +114,7 @@ class Occam(object):
         # proper spec
         if db is not None:
             self.init_db(db)
-        
+
         # app is specified properly
         if app is not None:
             self.init_app(app)
@@ -123,10 +123,24 @@ class Occam(object):
     def init_app(self, app):
         self.app = app
         self.app.route = types.MethodType(route, self.app)
+        self.app.config.setdefault('OCCAM_AUTODOC_ENABLED', True)
+        self.app.config.setdefault('OCCAM_AUTODOC_PREFIX', '/docs')
         self.app.config.setdefault('OCCAM_LOG_USER_FORMAT', 'user')
         self.app.config.setdefault('OCCAM_LOG_DEFAULT_LEVEL', 'info')
         self.app.url_map.converters['id'] = ModelConverter
         self.app.register_error_handler(ValidationError, ValidationError.handler)
+
+        @app.route(self.app.config['OCCAM_AUTODOC_PREFIX'] + '/<path:endpoint>')
+        def autodoc(endpoint):
+            endpoint = '/' + endpoint
+            adapter = current_app.url_map.bind(request.base_url)
+            url = adapter.match(endpoint, method=request.method)
+            func = current_app.view_functions[url[0]]
+            if not func.__doc__:
+                return '', 204
+            else:
+                return "<pre>\n" + func.__doc__ + "\n</pre>", 200
+
         return
 
     def init_db(self, db):
