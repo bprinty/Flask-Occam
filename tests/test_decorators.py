@@ -10,9 +10,10 @@
 import pytest
 from flask_occam import validate, optional
 from flask_occam import log
+from flask_occam import transactional
 from wtforms import Form, StringField, BooleanField, PasswordField, validators
 
-from .fixtures import app, ItemFactory, logs, logger
+from .fixtures import app, Item, ItemFactory, logs, logger
 
 from flask_occam.errors import ValidationError
 
@@ -78,6 +79,35 @@ class TestPaginateDecorator(object):
         assert 'Link' not in response.headers
         assert len(response.json) > 0
         assert response.status_code == 200
+        return
+
+
+# transactional
+# -------------
+class TestTransactionalDecorator(object):
+
+    @transactional
+    def create_item(self):
+        item = Item.create(name='transaction-okay')
+        return item.id
+
+    @transactional
+    def create_item_error(self):
+        item = Item.create(name='transaction-fail')
+        raise AssertionError
+        return item.id
+
+    def test_transactions(self):
+        # normal
+        ident = self.create_item()
+        assert Item.get(ident) is not None
+
+        # rollback
+        try:
+            self.create_item_error()
+        except AssertionError:
+            pass
+        assert Item.get(name='transaction-fail') is None
         return
 
 
