@@ -130,16 +130,23 @@ class Occam(object):
         self.app.url_map.converters['id'] = ModelConverter
         self.app.register_error_handler(ValidationError, ValidationError.handler)
 
-        @app.route(self.app.config['OCCAM_AUTODOC_PREFIX'] + '/<path:endpoint>')
-        def autodoc(endpoint):
-            endpoint = '/' + endpoint
-            adapter = current_app.url_map.bind(request.base_url)
-            url = adapter.match(endpoint, method=request.method)
-            func = current_app.view_functions[url[0]]
-            if not func.__doc__:
-                return '', 204
-            else:
-                return "<pre>\n" + func.__doc__ + "\n</pre>", 200
+        # add auto-documentation if specified
+        if self.app.config['OCCAM_AUTODOC_PREFIX']:
+
+            @app.route(self.app.config['OCCAM_AUTODOC_PREFIX'] + '/<path:endpoint>')
+            def autodoc(endpoint):
+                # TODO: consider changing this to use GET for all documentation
+                #       requests, and provide docstrings for all relevant methods
+                #       -- also, re-evaluate the necessity of this. It might
+                #       be too much (also security concerns)
+                endpoint = '/' + endpoint
+                adapter = current_app.url_map.bind(request.base_url)
+                url = adapter.match(endpoint, method=request.method)
+                func = current_app.view_functions[url[0]]
+                if not func.__doc__:
+                    return '', 204
+                else:
+                    return "<pre>\n" + func.__doc__ + "\n</pre>", 200
 
         return
 
