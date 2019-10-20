@@ -61,19 +61,19 @@ class Items(object):
             limit=request.args['limit'],
             offset=request.args['offset']
         )
-        return jsonify([x.json() for x in items]), 200
+        return [x.json() for x in items], 200
 
     @validate(name=str)
     @transactional
     def post(self):
         item = Item.create(**request.json)
-        return jsonify(item.json()), 201
+        return item.json(), 201
 
 
 @app.route('/items/<id(Item):item>')
 class ItemUpdates(object):
     def get(self, item):
-        return jsonify(item.json()), 200
+        return item.json(), 200
 
     @validate(
         name=optional(str),
@@ -81,7 +81,7 @@ class ItemUpdates(object):
     @transactional
     def put(self, item):
         item.update(**request.json)
-        return jsonify(item.json()), 200
+        return item.json(), 200
 
     @transactional
     def delete(self, item):

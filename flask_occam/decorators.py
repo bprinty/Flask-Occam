@@ -164,6 +164,23 @@ def paginate(**options):
     return decorator
 
 
+# db-related
+# ----------
+def transactional(func):
+    @wraps(func)
+    def inner(*args, **kwargs):
+        if 'sqlalchemy' not in current_app.extensions:
+            raise AssertionError('Cannot use @transactional if Flask-SQLAlchemy extension has not been registered!')
+        db = current_app.extensions['sqlalchemy'].db
+        try:
+            ret = func(*args, **kwargs)
+            db.session.commit()
+            return ret
+        except Exception as e:
+            db.session.rollback()
+            raise e
+    return inner
+
 
 # validation
 # ----------
@@ -345,21 +362,3 @@ def validate(*vargs, **vkwargs):
             return func(*args, **kwargs)
         return inner
     return decorator
-
-
-# db-related
-# ----------
-def transactional(func):
-    @wraps(func)
-    def inner(*args, **kwargs):
-        if 'sqlalchemy' not in current_app.extensions:
-            raise AssertionError('Cannot use @transactional if Flask-SQLAlchemy extension has not been registered!')
-        db = current_app.extensions['sqlalchemy'].db
-        try:
-            ret = func(*args, **kwargs)
-            db.session.commit()
-            return ret
-        except Exception as e:
-            db.session.rollback()
-            raise e
-    return inner
