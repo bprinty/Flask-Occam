@@ -7,6 +7,7 @@
 
 # imports
 # -------
+from functools import wraps
 from flask import Flask, Blueprint, current_app, request
 import types
 
@@ -32,6 +33,27 @@ METHODS = [
 
 # helpers
 # -------
+def autojsonify(func):
+    """
+    Automatically jsonify return payload if a dictionary
+    is returned from the url handler. This removes some
+    boilerplate associated with always needing to wrap
+    json with `jsonify`.
+    """
+    @wraps(func)
+    def _(*args, **kwargs):
+        ret = func(*args, **kwargs)
+        if isinstance(ret, dict):
+            ret = jsonify(ret)
+        elif isinstance(ret, tuple):
+            if isinstance(ret[0], dict):
+                ret = list(ret)
+                ret[0] = jsonify(ret[0])
+                ret = tuple(ret)
+        return ret
+    return _
+
+
 def route(self, rule, **options):
     """
     Decorator for registering view function for a given URL rule.
@@ -69,7 +91,7 @@ def route(self, rule, **options):
         endpoint = options.pop("endpoint", obj.__name__)
         app = self.app if hasattr(self, 'app') else self
         if isinstance(obj, types.FunctionType):
-            app.add_url_rule(rule, endpoint, obj, **options)
+            app.add_url_rule(rule, endpoint, autojsonify(obj), **options)
 
         # class-based definition
         else:
@@ -80,7 +102,7 @@ def route(self, rule, **options):
                 if hasattr(instance, handler):
                     endpoint = handler + '_' + obj.__name__.lower()
                     options['methods'] = [meth]
-                    func = getattr(instance, handler)
+                    func = autojsonify(getattr(instance, handler))
                     app.add_url_rule(
                         rule, endpoint, func,
                         **options
