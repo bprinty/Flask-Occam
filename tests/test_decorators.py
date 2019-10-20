@@ -59,19 +59,41 @@ class TestLogDecorator(object):
         return
 
 
+# paginate
+# --------
+class TestPaginateDecorator(object):
+
+    def test_integration(self, client, items):
+
+        # paginated request
+        response = client.get('/items')
+        assert response.status_code == 206
+        assert len(response.json) == 2
+        assert 'limit=2&offset=2' in response.headers['Link']
+        assert 'rel="next"' in response.headers['Link']
+        assert 'rel="last"' in response.headers['Link']
+
+        # no pagination needed
+        response = client.get('/items?limit=2000&offset=2')
+        assert 'Link' not in response.headers
+        assert len(response.json) > 0
+        assert response.status_code == 200
+        return
+
+
 # validate
 # --------
-@validate(
-    one=str, two=float,
-    three=optional(int),
-    four=optional(dict(
-        foo=str,
-        bar=str,
-    )),
-    five=optional([str])
-)
-def validate_types():
-    pass
+# @validate(
+#     one=str, two=float,
+#     three=optional(int),
+#     four=optional(dict(
+#         foo=str,
+#         bar=str,
+#     )),
+#     five=optional([str])
+# )
+# def validate_types():
+#     pass
 
 
 # @validate(
@@ -114,27 +136,27 @@ class TestValidateDecorator(object):
         print(response.json)
         return
 
-    def test_validate_types(self):
-        from flask import _request_ctx_stack
-        _request_ctx_stack.pop()
+    # def test_validate_types(self):
+    #     from flask import _request_ctx_stack
+    #     _request_ctx_stack.pop()
 
-        # no exception
-        validate_types(one='test', two=1.5)
-        validate_types(one='test', two=1.5, three=1, four=dict(foo='foo', bar='bar'), five=['one', 'two'])
+    #     # no exception
+    #     validate_types(one='test', two=1.5)
+    #     validate_types(one='test', two=1.5, three=1, four=dict(foo='foo', bar='bar'), five=['one', 'two'])
 
-        # non-optional
-        with pytest.raises(ValueError) as exc:
-            validate_types(one=1, two='test')
-            # assert one, two wrong
-            print(exc.message)
+    #     # non-optional
+    #     with pytest.raises(ValueError) as exc:
+    #         validate_types(one=1, two='test')
+    #         # assert one, two wrong
+    #         print(exc.message)
 
-        # optional
-        with pytest.raises(ValueError) as exc:
-            validate_types(one=1, two='test', three='test', four=dict(foo=1, bar='bar'), five=[1, 2])
-            # assert one, two, three, four.foo, and five wrong
-            print(exc.message)
+    #     # optional
+    #     with pytest.raises(ValueError) as exc:
+    #         validate_types(one=1, two='test', three='test', four=dict(foo=1, bar='bar'), five=[1, 2])
+    #         # assert one, two, three, four.foo, and five wrong
+    #         print(exc.message)
 
-        return
+    #     return
 
     def test_validate_form(self):
         from flask import _request_ctx_stack

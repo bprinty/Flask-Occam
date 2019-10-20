@@ -19,7 +19,7 @@ from .errors import ValidationError
 
 try:
     from flask_login import current_user
-except:
+except ImportError:
     current_user = None
 
 
@@ -90,6 +90,12 @@ def paginate(**options):
 
     MORE DOCS
     """
+    if 'total' not in options:
+        raise AssertionError(
+            '`@paginate` decorator requires `total=` parameter '
+            'for determining total number of records to paginate. '
+            'See the documentation for more details.')
+
     def decorator(func):
 
         @wraps(func)

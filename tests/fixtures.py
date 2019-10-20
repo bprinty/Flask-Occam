@@ -14,7 +14,7 @@ import logging
 from flask import Flask, request, jsonify
 from werkzeug.exceptions import NotFound
 from flask_sqlalchemy import SQLAlchemy
-from flask_occam import Occam, ActionHandler, transactional, validate, optional
+from flask_occam import Occam, ActionHandler, transactional, validate, optional, paginate
 from wtforms import validators, BooleanField
 
 from . import SANDBOX
@@ -55,8 +55,12 @@ boolean = BooleanField('Boolean', [
 @app.route('/items')
 class Items(object):
 
+    @paginate(limit=2, total=lambda: Item.count())
     def get(self):
-        items = Item.all()
+        items = Item.all(
+            limit=request.args['limit'],
+            offset=request.args['offset']
+        )
         return jsonify([x.json() for x in items]), 200
 
     @validate(name=str)
