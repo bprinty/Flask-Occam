@@ -38,6 +38,14 @@ class ModelMixin(object):
             result[column.key] = getattr(self, column.key)
         return result
 
+    def commit(self):
+        """
+        Commit change using session and return item
+        """
+        db = current_db()
+        db.session.commit()
+        return self
+
     @classmethod
     def get(cls, *args, **filters):
         """
@@ -105,34 +113,56 @@ class ModelMixin(object):
         """
         return cls.query.count()
 
-    # @classmethod
-    # def seed(cls, *args, **kwargs):
-    #     """
-    #     Create a list of objects, checking if
-    #     objects ex
-    #     """
-    #     multiple = True
+    @classmethod
+    def upsert(cls, *args, **kwargs):
+        """
+        Upsert specified data into database. If the data
+        doesn't exist in the database, it will be created,
+        otherwise, the record will be updated. This method
+        automatically detects unique keys by which to query
+        the database for existing records.
 
-    #     # arg inputs
-    #     if len(args) == 1:
-    #         if isinstance(args[0], (list, tuple)):
-    #             args = args[0]
-    #         else:
-    #             multiple = False
+        .. note:: The performance of this could be improved
+                  by doing bulk operations for querying and
+                  the create/update process.
+        """
+        # parse inputs
+        data, multiple = [], True
+        if len(kwargs):
+            data.append(kwargs)
+            multiple = False
+        elif len(args) == 1 and isinstance(args[0], (list, tuple)):
+            data = args[0]
+        else:
+            data = args
 
-    #     # kwarg inputs
-    #     elif len(kwargs):
-    #         multiple = False
-    #         args = [kwargs]
+        # gather unique columns for querying existing data
+        unique = []
+        mapper = inspect(cls)
+        for col in mapper.attrs:
+            if col.columns[0].unique:
+                unique.append(col.key)
 
-    #     # seed data
-    #     db = current_db()
-    #     result = []
-    #     for item in args:
-    #         obj = cls(**item)
-    #         db.session.add(obj)
-    #         result.append(obj)
+        # query for data and create or update
+        result = []
+        db = current_db()
+        for record in data:
 
-    #     db.session.flush()
+            # query using unique parameters
+            params = {k: record[k] for k in unique if k in record}
+            item = cls.get(**params)
 
-    #     return result if multiple else result[0]
+            # update if item exists
+            if item is not None:
+                item.update(**record)
+
+            # create if it doesn't
+            else:
+                item = cls.create(**record)
+                db.session.add(item)
+
+            result.append(item)
+
+        db.session.flush()
+
+        return result if multiple else result[0]
