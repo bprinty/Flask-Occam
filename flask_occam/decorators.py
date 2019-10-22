@@ -191,36 +191,15 @@ from wtforms import StringField, PasswordField, IntegerField
 from wtforms import BooleanField, FloatField, DateField, DateTimeField
 from wtforms import validators
 
-def create_validator(typ):
-    """
-    Create validator from type object, using common
-    type objects in python.
-    """
-    mapper = {
-        'str': StringField,
-        'bool': BooleanField,
-        'float': FloatField,
-        'int': IntegerField,
-        'date': DateField,
-        'datetime': DateTimeField
-    }
 
-    # handle list inputs
-    if isinstance(typ, list):
-        raise NotImplementedError('List types for validation not currently supported!')
-        if len(typ) != 1:
-            raise AssertionError('Lists specified for field validation must have exactly one element to validate on.')
-        if isinstance(typ[0], Field):
-            return [typ[0]]
-        else:
-            return [create_validator(typ[0])]
+class OptionalType:
 
-    # look for validation scheme in mapper
-    if typ.__name__ not in mapper:
-        raise AssertionError('No rule for validating on type {}'.format(typ))
+    def __init__(self, typ):
+        self.type = typ
+        return
 
-    field = mapper.get(typ.__name__)
-    return field(field.__name__, [validators.DataRequired()])
+    def __call__(self, item):
+        return self.type(item)
 
 
 def optional(field):
@@ -232,34 +211,157 @@ def optional(field):
         field (Field): Field to process validation options for.
     """
     # parse types as inputs
-    if not isinstance(field, (Field, UnboundField)):
-        field = create_validator(field)
+    if isinstance(field, (type, list, tuple, dict)):
+        return OptionalType(field)
 
-    # # check for field list
-    # field_list = isinstance(field, (list, tuple))
-    # if field_list:
-    #     field = field[0]
+    # handle validators directly
+    elif not isinstance(field, (Field, UnboundField)):
+        return StringField(field.__class__.__name__, [validators.Optional(), field])
 
-    # re-process field
-    if len(field.args) < 2:
-        raise AssertionError('Validator must have associated name and validation scheme (2 arguments)')
-    name = field.args[0]
-    checks = list(filter(
-        lambda x: not isinstance(x, validators.DataRequired),
-        field.args[1]
-    ))
-    checks.insert(0, validators.Optional())
-    obj = field.field_class(name, checks)
+    # handle wtform input class
+    else:
+        if len(field.args) < 2:
+            raise AssertionError('Validator must have associated name and validation scheme (2 arguments)')
+        name = field.args[0]
+        checks = list(filter(
+            lambda x: not isinstance(x, (validators.DataRequired, validators.InputRequired)),
+            field.args[1]
+        ))
+        checks.insert(0, validators.Optional())
+        obj = field.field_class(name, checks)
+        return obj
 
-    # return field or field list based on input
-    return obj # if not field_list else [obj]
+
+def create_validator(contract):
+
+    type_contract, form_contract = {}, {}
+    for key in contract:
+        field = contract[key]
+        if isinstance(field, (type, list, tuple, dict, OptionalType)):
+            type_contract[key] = field
+        elif isinstance(field, (Field, UnboundField)):
+            form_contract[key] = field
+        else:
+            form_contract[key] = StringField(key, [
+                validators.DataRequired()
+            ])
+
+    class ContractValidator(object):
+        """
+        Custom validator class that can handle both
+        wtforms validators and nested type validation.
+        """
+        type_contract = type_contract
+        form_contract = form_contract
+
+        def __init__(self, data):
+            self.data = data
+            self.errors = {}
+            return
+
+        def check_type(self, actual, expected):
+            # missing parameter (checked in api methods)
+            if actual is None:
+                return True
+
+            # type
+            if isinstance(expected, type):
+                return isinstance(actual, expected)
+
+            # dictionary of types
+            elif isinstance(expected, dict):
+                if not isinstance(actual, dict):
+                    return False
+                Validator = create_validator(expected)
+                form = Validator(data=actual)
+                return form.validate()
+
+            # list of objects (expected structure should
+            # have one entry representing shape of elements)
+            elif isinstance(expected, list):
+                if not isinstance(actual, list):
+                    return False
+                Validator = create_validator(expected[0])
+                for entry in actual:
+                    form = Validator(data=entry)
+                    return form.validate()
+
+            return True
+
+        def check_form(self, actual, expected):
+            class CustomValidator(Form):
+                pass
+            for key in expected:
+                setattr(CustomValidator, key, expected[key])
+            form = CustomValidator(data=actual)
+            form.process()
+            valid = form.validate()
+            self.errors.update(form.errors)
+            return valid
+
+        def process(self):
+            # NOOP for parity with form validator
+            return
+
+        def validate(self, data):
+            valid = True
+
+            # process types in contract
+            if self.type_contract:
+                for key in self.type_contract:
+                    expect = self.type_contract[key]
+
+                    # check for required fields
+                    if key not in data and not isinstance(expect, OptionalType):
+                        self.errors[key] = ['Field required.']
+                        valid = False
+
+                    # check type and nested data
+                    else:
+                        tcheck = self.check_type(data.get(key), self.type_contract[key])
+                        valid &= tcheck
+                        if not tcheck:
+                            self.errors[key] = ['Invalid type.']
+
+            # process form validators in contract
+            if self.form_contract:
+                valid &= self.check_form(data, self.form_contract)
+            return len(self.errors)
+
+    return ContractValidator
 
 
 def validate(*vargs, **vkwargs):
     """
-    Validate payload data inputted to request handler.
+    Validate payload data inputted to request handler or
+    API method.
 
     Examples:
+
+        Using types with API method:
+
+        .. code-block:: python
+
+            @validate(
+                email=str,
+                password=str
+            )
+            def login(email, password):
+                return
+
+        Using nested types:
+
+        .. code-block:: python
+
+            @blueprint.route('/login', methods=['POST'])
+            @validate(
+                data=dict(
+                    email=str,
+                    password=str
+                )
+            )
+            def login():
+                return
 
         With pre-defined validation object:
 
@@ -300,27 +402,14 @@ def validate(*vargs, **vkwargs):
             def login():
                 return
 
-    TODO: documentation about how it can also be used with cli methods.
-
-    TODO: INCLUDE PLACE FOR DOCUMENTATION URL IN REQUEST?
-
     """
-    print(vargs, vkwargs)
-
     # validator class
     if len(vargs):
         Validator = vargs[0]
 
     # validator as keyword arguments
     elif len(vkwargs):
-        class CustomValidator(Form):
-            pass
-        for kw in vkwargs:
-            if not isinstance(vkwargs[kw], (Field, UnboundField)):
-                print(kw, vkwargs[kw])
-                vkwargs[kw] = create_validator(vkwargs[kw])
-            setattr(CustomValidator, kw, vkwargs[kw])
-        Validator = CustomValidator
+        Validator = create_validator(vkwargs)
 
     # incorrect arguments
     else:
@@ -351,6 +440,7 @@ def validate(*vargs, **vkwargs):
 
             # run payload validation
             form = Validator(data=data)
+            form.process()
             if not form.validate():
                 if in_request:
                     raise ValidationError('Invalid request payload.', form.errors)
