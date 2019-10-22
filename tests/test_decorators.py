@@ -159,11 +159,19 @@ class TestValidateDecorator(object):
 
     def test_integration(self, client):
         item = ItemFactory.create(name='test')
+
+        # invalid
         response = client.put('/items/{}'.format(item.id), json=dict(
             name=1
         ))
-        print(response.json)
         assert response.status_code == 422
+        assert 'name' in response.json['errors']
+
+        # valid
+        response = client.put('/items/{}'.format(item.id), json=dict(
+            name='test'
+        ))
+        assert response.status_code == 200
         return
 
     # def test_validate_types(self):
