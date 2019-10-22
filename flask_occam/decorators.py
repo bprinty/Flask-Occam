@@ -234,25 +234,23 @@ def optional(field):
 
 def create_validator(contract):
 
-    type_contract, form_contract = {}, {}
-    for key in contract:
-        field = contract[key]
-        if isinstance(field, (type, list, tuple, dict, OptionalType)):
-            type_contract[key] = field
-        elif isinstance(field, (Field, UnboundField)):
-            form_contract[key] = field
-        else:
-            form_contract[key] = StringField(key, [
-                validators.DataRequired()
-            ])
-
     class ContractValidator(object):
         """
         Custom validator class that can handle both
         wtforms validators and nested type validation.
         """
-        type_contract = type_contract
-        form_contract = form_contract
+        type_contract = {}
+        form_contract = {}
+        for key in contract:
+            field = contract[key]
+            if isinstance(field, (type, list, tuple, dict, OptionalType)):
+                type_contract[key] = field
+            elif isinstance(field, (Field, UnboundField)):
+                form_contract[key] = field
+            else:
+                form_contract[key] = StringField(key, [
+                    validators.DataRequired()
+                ])
 
         def __init__(self, data):
             self.data = data
@@ -264,9 +262,12 @@ def create_validator(contract):
             if actual is None:
                 return True
 
-            # type
+            # types
             if isinstance(expected, type):
                 return isinstance(actual, expected)
+
+            elif isinstance(expected, OptionalType):
+                return isinstance(actual, expected.type)
 
             # dictionary of types
             elif isinstance(expected, dict):
@@ -293,6 +294,7 @@ def create_validator(contract):
                 pass
             for key in expected:
                 setattr(CustomValidator, key, expected[key])
+            print(actual)
             form = CustomValidator(data=actual)
             form.process()
             valid = form.validate()
@@ -303,7 +305,7 @@ def create_validator(contract):
             # NOOP for parity with form validator
             return
 
-        def validate(self, data):
+        def validate(self):
             valid = True
 
             # process types in contract
@@ -312,21 +314,24 @@ def create_validator(contract):
                     expect = self.type_contract[key]
 
                     # check for required fields
-                    if key not in data and not isinstance(expect, OptionalType):
+                    if key not in self.data and not isinstance(expect, OptionalType):
                         self.errors[key] = ['Field required.']
                         valid = False
 
                     # check type and nested data
                     else:
-                        tcheck = self.check_type(data.get(key), self.type_contract[key])
+                        tcheck = self.check_type(self.data.get(key), self.type_contract[key])
                         valid &= tcheck
                         if not tcheck:
                             self.errors[key] = ['Invalid type.']
 
             # process form validators in contract
             if self.form_contract:
-                valid &= self.check_form(data, self.form_contract)
-            return len(self.errors)
+                print('form!')
+                # STOPPED HERE - NEED TO FIGURE OUT WHY FORM VALIDATION IS ERRORING OUT
+                valid &= self.check_form(self.data, self.form_contract)
+
+            return valid
 
     return ContractValidator
 
@@ -445,8 +450,8 @@ def validate(*vargs, **vkwargs):
                 if in_request:
                     raise ValidationError('Invalid request payload.', form.errors)
                 else:
-                    errors = yaml.dump(form.errors).replace('\n', '\n  ') + '\n'
-                    raise ValueError('Invalid arguments specified. Errors: {}'.format(errors))
+                    errors = yaml.dump(form.errors, indent=2).replace('\n', '\n  ') + '\n'
+                    raise ValueError('Invalid arguments specified.\nErrors:\n  {}'.format(errors))
 
             # subset inputs by validators
             return func(*args, **kwargs)
