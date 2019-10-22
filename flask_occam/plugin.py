@@ -7,8 +7,9 @@
 
 # imports
 # -------
+import re
 from functools import wraps
-from flask import Flask, Blueprint, current_app, request
+from flask import Flask, Blueprint, current_app, request, jsonify
 import types
 
 from .converters import ModelConverter
@@ -29,10 +30,28 @@ METHODS = [
     'TRACE',
     'PATCH'
 ]
+DOCS = {}
 
 
 # helpers
 # -------
+def document(obj):
+    """
+    Parse function or method and save documentation
+    information in global DOCS data structure for
+    auto-serving documentation.
+    """
+    global DOCS, METHODS
+    if obj.__doc__:
+        m = re.search(r"({})\s+(/.+?)\s".format('|'.join(METHODS)), obj.__doc__)
+        if m:
+            method, endpoint = m.group(1), m.group(2)
+            if endpoint not in DOCS:
+                DOCS[endpoint] = {}
+            DOCS[endpoint][method] = obj.__doc__
+    return
+
+
 def autojsonify(func):
     """
     Automatically jsonify return payload if a dictionary
@@ -91,6 +110,7 @@ def route(self, rule, **options):
         endpoint = options.pop("endpoint", obj.__name__)
         app = self.app if hasattr(self, 'app') else self
         if isinstance(obj, types.FunctionType):
+            document(obj)
             app.add_url_rule(rule, endpoint, autojsonify(obj), **options)
 
         # class-based definition
@@ -102,9 +122,10 @@ def route(self, rule, **options):
                 if hasattr(instance, handler):
                     endpoint = handler + '_' + obj.__name__.lower()
                     options['methods'] = [meth]
-                    func = autojsonify(getattr(instance, handler))
+                    func = getattr(instance, handler)
+                    document(func)
                     app.add_url_rule(
-                        rule, endpoint, func,
+                        rule, endpoint, autojsonify(func),
                         **options
                     )
 
@@ -154,21 +175,16 @@ class Occam(object):
 
         # add auto-documentation if specified
         if self.app.config['OCCAM_AUTODOC_PREFIX']:
-
             @app.route(self.app.config['OCCAM_AUTODOC_PREFIX'] + '/<path:endpoint>')
             def autodoc(endpoint):
-                # TODO: consider changing this to use GET for all documentation
-                #       requests, and provide docstrings for all relevant methods
-                #       -- also, re-evaluate the necessity of this. It might
-                #       be too much (also security concerns)
                 endpoint = '/' + endpoint
-                adapter = current_app.url_map.bind(request.base_url)
-                url = adapter.match(endpoint, method=request.method)
-                func = current_app.view_functions[url[0]]
-                if not func.__doc__:
-                    return '', 204
-                else:
-                    return "<pre>\n" + func.__doc__ + "\n</pre>", 200
+                if endpoint in DOCS:
+                    doc = []
+                    for method in METHODS:
+                        if method in DOCS[endpoint]:
+                            doc.append(DOCS[endpoint][method])
+                    return "<pre>\n" + '\n---\n'.join(doc) + "\n</pre>", 200
+                return '', 204
 
         return
 
