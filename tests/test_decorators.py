@@ -162,8 +162,8 @@ class TestValidateDecorator(object):
         response = client.put('/items/{}'.format(item.id), json=dict(
             name=1
         ))
-        assert response.status_code == 422
         print(response.json)
+        assert response.status_code == 422
         return
 
     # def test_validate_types(self):
