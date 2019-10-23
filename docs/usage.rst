@@ -705,33 +705,33 @@ A list of configuration keys currently understood by the extension:
 ================================== =========================================
 
 
-Other Customizations
-++++++++++++++++++++
+.. Other Customizations
+.. ++++++++++++++++++++
 
-As detailed in the `Overview <./overview.html>`_ section of the documentation,
-the plugin can be customized with specific triggers. The following detail
-what can be customized:
+.. As detailed in the `Overview <./overview.html>`_ section of the documentation,
+.. the plugin can be customized with specific triggers. The following detail
+.. what can be customized:
 
-* ``option`` - An option for the plugin.
+.. * ``option`` - An option for the plugin.
 
-The code below details how you can override all of these configuration options:
+.. The code below details how you can override all of these configuration options:
 
-.. code-block:: python
+.. .. code-block:: python
 
-    from flask import Flask
-    from flask_occam import Occam
+..     from flask import Flask
+..     from flask_occam import Occam
 
-    app = Flask(__name__)
-    occam = Occam(option=True)
-    occam.init_app(app)
+..     app = Flask(__name__)
+..     occam = Occam(option=True)
+..     occam.init_app(app)
 
-    # or, with model extensions
-    from flask_sqlalchemy import SQLAlchemy
+..     # or, with model extensions
+..     from flask_sqlalchemy import SQLAlchemy
 
-    app = Flask(__name__)
-    db = SQLAlchemy()
-    occam = Occam(db)
-    occam.init_app(app)
+..     app = Flask(__name__)
+..     db = SQLAlchemy()
+..     occam = Occam(db)
+..     occam.init_app(app)
 
 
-For even more in-depth information on the module and the tools it provides, see the `API <./api.html>`_ section of the documentation.
+.. For even more in-depth information on the module and the tools it provides, see the `API <./api.html>`_ section of the documentation.
