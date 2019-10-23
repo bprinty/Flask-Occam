@@ -7,6 +7,7 @@
 
 # imports
 # -------
+import sys
 import yaml
 import inspect
 import logging
@@ -16,6 +17,9 @@ from werkzeug.datastructures import ImmutableMultiDict
 from flask import request, current_app, Response, has_request_context
 from wtforms import Form
 from .errors import ValidationError
+
+if sys.version_info[0] >= 3:
+    unicode = str
 
 try:
     from flask_login import current_user
@@ -190,6 +194,7 @@ from wtforms import FieldList
 from wtforms import StringField, PasswordField, IntegerField
 from wtforms import BooleanField, FloatField, DateField, DateTimeField
 from wtforms import validators
+from werkzeug.datastructures import MultiDict
 
 
 class OptionalType:
@@ -249,7 +254,8 @@ def create_validator(contract):
                 form_contract[key] = field
             else:
                 form_contract[key] = StringField(key, [
-                    validators.DataRequired()
+                    validators.DataRequired(),
+                    field
                 ])
 
         def __init__(self, data):
@@ -263,18 +269,21 @@ def create_validator(contract):
                 return True
 
             # types
-            if isinstance(expected, type):
-                return isinstance(actual, expected)
+            if isinstance(expected, OptionalType):
+                expected = expected.type
 
-            elif isinstance(expected, OptionalType):
-                return isinstance(actual, expected.type)
+            if isinstance(expected, type):
+                if expected == str:
+                    return isinstance(actual, (str, unicode))
+                else:
+                    return isinstance(actual, expected)
 
             # dictionary of types
             elif isinstance(expected, dict):
                 if not isinstance(actual, dict):
                     return False
                 Validator = create_validator(expected)
-                form = Validator(data=actual)
+                form = Validator(MultiDict(actual))
                 return form.validate()
 
             # list of objects (expected structure should
@@ -282,10 +291,16 @@ def create_validator(contract):
             elif isinstance(expected, list):
                 if not isinstance(actual, list):
                     return False
-                Validator = create_validator(expected[0])
-                for entry in actual:
-                    form = Validator(data=entry)
-                    return form.validate()
+                if isinstance(expected[0], type):
+                    for entry in actual:
+                        if not self.check_type(entry, expected[0]):
+                            return False
+                else:
+                    Validator = create_validator(expected[0])
+                    for entry in actual:
+                        form = Validator(MultiDict(entry))
+                        if not form.validate():
+                            return False
 
             return True
 
@@ -294,16 +309,10 @@ def create_validator(contract):
                 pass
             for key in expected:
                 setattr(CustomValidator, key, expected[key])
-            print(actual)
-            form = CustomValidator(data=actual)
-            form.process()
+            form = CustomValidator(MultiDict(actual))
             valid = form.validate()
             self.errors.update(form.errors)
             return valid
-
-        def process(self):
-            # NOOP for parity with form validator
-            return
 
         def validate(self):
             valid = True
@@ -315,7 +324,7 @@ def create_validator(contract):
 
                     # check for required fields
                     if key not in self.data and not isinstance(expect, OptionalType):
-                        self.errors[key] = ['Field required.']
+                        self.errors[key] = ['This field is required.']
                         valid = False
 
                     # check type and nested data
@@ -323,12 +332,13 @@ def create_validator(contract):
                         tcheck = self.check_type(self.data.get(key), self.type_contract[key])
                         valid &= tcheck
                         if not tcheck:
-                            self.errors[key] = ['Invalid type.']
+                            typ = self.type_contract[key]
+                            if isinstance(typ, OptionalType):
+                                typ = typ.type
+                            self.errors[key] = ['Invalid type. Expecting `{}`.'.format(typ)]
 
             # process form validators in contract
             if self.form_contract:
-                print('form!')
-                # STOPPED HERE - NEED TO FIGURE OUT WHY FORM VALIDATION IS ERRORING OUT
                 valid &= self.check_form(self.data, self.form_contract)
 
             return valid
@@ -444,8 +454,7 @@ def validate(*vargs, **vkwargs):
                     raise AssertionError('No arguments specified.')
 
             # run payload validation
-            form = Validator(data=data)
-            form.process()
+            form = Validator(MultiDict(data))
             if not form.validate():
                 if in_request:
                     raise ValidationError('Invalid request payload.', form.errors)
