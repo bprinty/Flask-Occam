@@ -9,7 +9,7 @@
 # -------
 import re
 from functools import wraps
-from flask import Flask, Blueprint, current_app, request, jsonify
+from flask import Flask, Blueprint, Response, current_app, request, jsonify
 import types
 
 from .converters import ModelConverter
@@ -62,13 +62,13 @@ def autojsonify(func):
     @wraps(func)
     def _(*args, **kwargs):
         ret = func(*args, **kwargs)
-        if isinstance(ret, dict):
-            ret = jsonify(ret)
-        elif isinstance(ret, tuple):
-            if isinstance(ret[0], dict):
+        if isinstance(ret, tuple):
+            if not isinstance(ret[0], Response):
                 ret = list(ret)
                 ret[0] = jsonify(ret[0])
                 ret = tuple(ret)
+        elif not isinstance(ret, Response):
+            ret = jsonify(ret)
         return ret
     return _
 
