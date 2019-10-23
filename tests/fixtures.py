@@ -9,7 +9,6 @@
 # -------
 import io
 import pytest
-import factory
 import logging
 from flask import Flask, request, jsonify
 from werkzeug.exceptions import NotFound
@@ -116,19 +115,6 @@ class Item(db.Model):
             name=self.name,
             archived=self.archived
         )
-
-
-# factories
-# ---------
-class ItemFactory(factory.alchemy.SQLAlchemyModelFactory):
-
-    id = factory.Sequence(lambda x: x)
-    name = factory.Faker('name')
-    archived = False
-
-    class Meta:
-        model = Item
-        sqlalchemy_session = db.session
 
 
 # fixtures
