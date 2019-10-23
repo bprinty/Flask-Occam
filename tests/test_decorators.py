@@ -113,29 +113,29 @@ class TestTransactionalDecorator(object):
 
 # validate
 # --------
-# @validate(
-#     one=str, two=float,
-#     three=optional(int),
-#     four=optional(dict(
-#         foo=str,
-#         bar=str,
-#     )),
-#     five=optional([str])
-# )
-# def validate_types():
-#     pass
+@validate(
+    one=str, two=float,
+    three=optional(int),
+    four=optional(dict(
+        foo=str,
+        bar=str,
+    )),
+    five=optional([str])
+)
+def validate_types(one, two, three=None, four=None, five=None):
+    pass
 
 
-# @validate(
-#     field=validators.BooleanField(),
-#     validator=StringField('Boolean', [
-#         validators.DataRequired(),
-#         validators.BooleanField(),
-#     ]),
-#     optional=optional(validators.BooleanField())
-# )
-# def validate_validators():
-#     pass
+@validate(
+    email=validators.Email(),
+    check=optional(StringField('check', [
+        validators.Length(min=3, max=10),
+        validators.EqualTo('confirm')
+    ])),
+    confirm=optional(validators.Length(min=3, max=10))
+)
+def validate_validators(email, check, confirm):
+    pass
 
 
 class ValidateForm(Form):
@@ -174,27 +174,47 @@ class TestValidateDecorator(object):
         assert response.status_code == 200
         return
 
-    # def test_validate_types(self):
-    #     from flask import _request_ctx_stack
-    #     _request_ctx_stack.pop()
+    def test_validate_types(self):
+        from flask import _request_ctx_stack
+        _request_ctx_stack.pop()
 
-    #     # no exception
-    #     validate_types(one='test', two=1.5)
-    #     validate_types(one='test', two=1.5, three=1, four=dict(foo='foo', bar='bar'), five=['one', 'two'])
+        # no exception
+        validate_types(one='test', two=1.5)
+        validate_types(one='test', two=1.5, three=1, four=dict(foo='foo', bar='bar'), five=['one', 'two'])
 
-    #     # non-optional
-    #     with pytest.raises(ValueError) as exc:
-    #         validate_types(one=1, two='test')
-    #         # assert one, two wrong
-    #         print(exc.message)
+        # non-optional
+        with pytest.raises(ValueError) as exc:
+            validate_types(one=1, two='test')
+            # assert one, two wrong
+            print(exc.message)
 
-    #     # optional
-    #     with pytest.raises(ValueError) as exc:
-    #         validate_types(one=1, two='test', three='test', four=dict(foo=1, bar='bar'), five=[1, 2])
-    #         # assert one, two, three, four.foo, and five wrong
-    #         print(exc.message)
+        # optional
+        with pytest.raises(ValueError) as exc:
+            validate_types(one=1, two='test', three='test', four=dict(foo=1, bar='bar'), five=[1, 2])
+            # assert one, two, three, four.foo, and five wrong
+            print(exc.message)
 
-    #     return
+        return
+
+    def test_validate_validators(self):
+        from flask import _request_ctx_stack
+        _request_ctx_stack.pop()
+
+        # raises error
+        with pytest.raises(ValueError):
+            validate_validators(email='test', check='test', confirm='test')
+
+        # raises error
+        with pytest.raises(ValueError):
+            validate_validators(email='a@b.com', check='t', confirm='t')
+
+        # raises error
+        with pytest.raises(ValueError):
+            validate_validators(email='a@b.com', check='test', confirm='aaaa')
+
+        # no error
+        assert validate_validators(email='a@b.com', check='test', confirm='test') is None
+        return
 
     def test_validate_form(self):
         from flask import _request_ctx_stack
@@ -208,10 +228,4 @@ class TestValidateDecorator(object):
         assert validate_form(string='test', boolean=True) is None
         return
 
-    # def test_query_new(self, client):
-    #     # other open read permissions
-    #     item = ItemFactory.create(name='test')
-    #     response = client.get('/items/{}'.format(item.id))
-    #     assert response.status_code == 200
-    #     assert response.json['name'] == 'test'
-    #     return
+
