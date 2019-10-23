@@ -27,6 +27,7 @@ class Config(object):
     TESTING = True
     SQLALCHEMY_ECHO = False
     PROPAGATE_EXCEPTIONS = False
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_DATABASE_URI = 'sqlite:///{}/app.db'.format(SANDBOX)
     PLUGIN_DEFAULT_VARIABLE = True
 
@@ -107,7 +108,7 @@ class Item(db.Model):
     # basic
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False, unique=True, index=True)
-    archived = db.Column(db.Boolean)
+    archived = db.Column(db.Boolean, default=False)
 
     def json(self):
         return dict(
@@ -121,7 +122,7 @@ class Item(db.Model):
 # ---------
 class ItemFactory(factory.alchemy.SQLAlchemyModelFactory):
 
-    id = factory.Sequence(lambda x: x + 100)
+    id = factory.Sequence(lambda x: x)
     name = factory.Faker('name')
     archived = False
 
@@ -137,10 +138,11 @@ def items(client):
 
     # roles
     items = [
-        ItemFactory.create(id=1, name='one'),
-        ItemFactory.create(id=2, name='two'),
-        ItemFactory.create(id=3, name='three')
+        Item.create(name='one'),
+        Item.create(name='two'),
+        Item.create(name='three')
     ]
+    db.session.commit()
 
     yield items
 

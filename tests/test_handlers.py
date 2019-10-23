@@ -11,7 +11,7 @@ import pytest
 from flask import jsonify
 
 from flask_occam import transactional, ActionHandler, QueryHandler
-from .fixtures import app, ItemFactory
+from .fixtures import app, Item
 
 
 # handlers
@@ -62,7 +62,7 @@ class TestCRUD(object):
         return
 
     def test_update(self, client):
-        item = ItemFactory.create(name='update')
+        item = Item.create(name='update').commit()
 
         # update it
         response = client.put('/items/{}'.format(item.id), json=dict(
@@ -78,7 +78,7 @@ class TestCRUD(object):
         return
 
     def test_delete(self, client):
-        item = ItemFactory.create(name='delete')
+        item = Item.create(name='delete').commit()
 
         # make sure it's there
         response = client.get('/items/{}'.format(item.id))

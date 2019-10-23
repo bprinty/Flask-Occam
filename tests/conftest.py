@@ -34,7 +34,7 @@ logging.basicConfig(level=logging.ERROR)
 # -------
 def pytest_addoption(parser):
     parser.addoption("-N", "--no-teardown", default=False, help="Do not tear down sandbox directory after testing session.")
-    parser.addoption("-E", "--echo", default=False, help="Be verbose in query logging.")
+    parser.addoption("-E", "--echo", action='store_true', default=False, help="Be verbose in query logging.")
     return
 
 
