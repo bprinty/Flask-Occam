@@ -304,7 +304,7 @@ In addition, you can have Flask-Occum automatically serve REST-based documentati
 
 ..  code-block:: bash
 
-    ~$ curl -X GET http://localhost:5000/docs/items/1
+    ~$ curl -X GET http://localhost:5000/docs/items/:id
     <pre>
         GET /items/:id
 
@@ -692,6 +692,16 @@ A list of configuration keys currently understood by the extension:
 ``OCCAM_LOG_USER_FORMAT``          The name of the ``current_user`` available
                                    when using the ``@log`` decorator. Defaults
                                    to ``user``.
+
+``OCCAM_AUTODOC_ENABLED``          Whether or not to enable the api auto-
+                                   documentation feature.
+
+``OCCAM_AUTODOC_PREFIX``           URL Prefix for auto-documentation entpoint.
+
+``OCCAM_LOG_USER_FORMAT``          Name name for {user} formatter in @log
+                                   decorator.
+
+``OCCAM_LOG_DEFAULT_LEVEL``        Default log level for @log decorator.
 ================================== =========================================
 
 
