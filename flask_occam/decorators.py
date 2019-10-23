@@ -12,10 +12,12 @@ import yaml
 import inspect
 import logging
 from functools import wraps
+from wtforms.fields.core import UnboundField, Field
+from wtforms import validators, Form, StringField
 from werkzeug.exceptions import ExpectationFailed
-from werkzeug.datastructures import ImmutableMultiDict
+from werkzeug.datastructures import MultiDict, ImmutableMultiDict
 from flask import request, current_app, Response, has_request_context
-from wtforms import Form
+
 from .errors import ValidationError
 
 if sys.version_info[0] >= 3:
@@ -74,7 +76,6 @@ class log(object):
 
     @classmethod
     def warning(cls, msg):
-        print(msg)
         return cls(msg, level='warning')
 
     @classmethod
@@ -188,15 +189,6 @@ def transactional(func):
 
 # validation
 # ----------
-from wtforms.fields.core import UnboundField, Field
-from wtforms.fields.core import UnboundField, Field
-from wtforms import FieldList
-from wtforms import StringField, PasswordField, IntegerField
-from wtforms import BooleanField, FloatField, DateField, DateTimeField
-from wtforms import validators
-from werkzeug.datastructures import MultiDict
-
-
 class OptionalType:
 
     def __init__(self, typ):
@@ -329,12 +321,10 @@ def create_validator(contract):
 
                     # check type and nested data
                     else:
-                        tcheck = self.check_type(self.data.get(key), self.type_contract[key])
+                        tcheck = self.check_type(self.data.get(key), expect)
                         valid &= tcheck
                         if not tcheck:
-                            typ = self.type_contract[key]
-                            if isinstance(typ, OptionalType):
-                                typ = typ.type
+                            typ = expect if not isinstance(expect, OptionalType) else expect.type
                             self.errors[key] = ['Invalid type. Expecting `{}`.'.format(typ)]
 
             # process form validators in contract
@@ -349,7 +339,15 @@ def create_validator(contract):
 def validate(*vargs, **vkwargs):
     """
     Validate payload data inputted to request handler or
-    API method.
+    API method. This decorator can take any arbitrary
+    data structure and determine rules to validate inputs with.
+    It can be run within the context of a flask request, or
+    for an api method directly. See the examples below for
+    details.
+
+    .. note:: In a request context, a ``ValidationError`` will be
+              thrown (HTTP 422 Unprocessable Entity). Outside of a
+              request, a ``ValueError`` will be raised.
 
     Examples:
 
@@ -364,14 +362,16 @@ def validate(*vargs, **vkwargs):
             def login(email, password):
                 return
 
-        Using nested types:
+        Using nested types (mixing types and validators):
 
         .. code-block:: python
+
+            from wtforms import validators
 
             @blueprint.route('/login', methods=['POST'])
             @validate(
                 data=dict(
-                    email=str,
+                    email=validators.Email(),
                     password=str
                 )
             )
@@ -416,7 +416,6 @@ def validate(*vargs, **vkwargs):
             )
             def login():
                 return
-
     """
     # validator class
     if len(vargs):
@@ -453,8 +452,14 @@ def validate(*vargs, **vkwargs):
                 else:
                     raise AssertionError('No arguments specified.')
 
+            # instantiate validator with data (changes based
+            # on normal vs dynamic validator)
+            if isinstance(Validator, Form):
+                form = Validator(MultiDict(data))
+            else:
+                form = Validator(data=data)
+
             # run payload validation
-            form = Validator(MultiDict(data))
             if not form.validate():
                 if in_request:
                     raise ValidationError('Invalid request payload.', form.errors)

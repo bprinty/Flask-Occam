@@ -13,7 +13,7 @@ from flask_occam import log
 from flask_occam import transactional
 from wtforms import Form, StringField, BooleanField, PasswordField, validators
 
-from .fixtures import app, Item, ItemFactory, logs, logger
+from .fixtures import app, Item, logs, logger
 
 from flask_occam.errors import ValidationError
 
@@ -111,54 +111,12 @@ class TestTransactionalDecorator(object):
         return
 
 
-# validate
-# --------
-@validate(
-    one=str, two=float,
-    three=optional(int),
-    four=optional(dict(
-        foo=str,
-        bar=str,
-    )),
-    five=optional([str])
-)
-def validate_types(one, two, three=None, four=None, five=None):
-    pass
-
-
-@validate(
-    email=validators.Email(),
-    check=optional(StringField('check', [
-        validators.Length(min=3, max=10),
-        validators.EqualTo('confirm')
-    ])),
-    confirm=optional(validators.Length(min=3, max=10))
-)
-def validate_validators(email, check, confirm):
-    pass
-
-
-class ValidateForm(Form):
-    string = StringField('String', [
-        validators.DataRequired(),
-        validators.Length(min=3, max=10)
-    ])
-    boolean = BooleanField('Boolean', [
-        validators.DataRequired(),
-    ])
-
-
-@validate(ValidateForm)
-def validate_form(string, boolean):
-    pass
-
-
 # validate tests
 # --------------
 class TestValidateDecorator(object):
 
     def test_integration(self, client):
-        item = ItemFactory.create(name='test')
+        item = Item.create(name='validation-test').commit()
 
         # invalid
         response = client.put('/items/{}'.format(item.id), json=dict(
@@ -178,54 +136,121 @@ class TestValidateDecorator(object):
         from flask import _request_ctx_stack
         _request_ctx_stack.pop()
 
+        # function
+        @validate(
+            one=str, two=float,
+            three=list,
+            four=optional(dict(
+                foo=str,
+                bar=str,
+            )),
+            five=optional([str])
+        )
+        def test(one, two, three, four=None, five=None):
+            pass
+
         # no exception
-        validate_types(one='test', two=1.5)
-        validate_types(one='test', two=1.5, three=1, four=dict(foo='foo', bar='bar'), five=['one', 'two'])
+        test(one='test', two=1.5, three=[1])
+        test(one='test', two=1.5, three=[1], four=dict(foo='foo', bar='bar'), five=['one', 'two'])
 
         # non-optional
-        with pytest.raises(ValueError) as exc:
-            validate_types(one=1, two='test')
-            # assert one, two wrong
-            print(exc.message)
+        try:
+            test(one=1, two='test', three=1)
+            self.fail('ValueError not thrown')
+        except ValueError as exc:
+            message = str(exc)
+            assert 'one:' in message
+            assert 'two:' in message
+            assert 'three:' in message
 
         # optional
-        with pytest.raises(ValueError) as exc:
-            validate_types(one=1, two='test', three='test', four=dict(foo=1, bar='bar'), five=[1, 2])
-            # assert one, two, three, four.foo, and five wrong
-            print(exc.message)
-
+        try:
+            test(one='test', two=1.5, three=[1], four=dict(foo=1, bar='bar'), five=[1, 2])
+            self.fail('ValueError not thrown')
+        except ValueError as exc:
+            message = str(exc)
+            assert 'four:' in message
+            assert 'five:' in message
         return
 
     def test_validate_validators(self):
         from flask import _request_ctx_stack
         _request_ctx_stack.pop()
 
-        # raises error
-        with pytest.raises(ValueError):
-            validate_validators(email='test', check='test', confirm='test')
+        # function
+        @validate(
+            email=validators.Email(),
+            check=optional(StringField('check', [
+                validators.Length(min=3, max=10),
+                validators.EqualTo('confirm')
+            ])),
+            confirm=optional(validators.Length(min=3, max=10))
+        )
+        def test(email, check, confirm):
+            pass
 
         # raises error
         with pytest.raises(ValueError):
-            validate_validators(email='a@b.com', check='t', confirm='t')
+            test(email='test', check='test', confirm='test')
 
         # raises error
         with pytest.raises(ValueError):
-            validate_validators(email='a@b.com', check='test', confirm='aaaa')
+            test(email='a@b.com', check='t', confirm='t')
+
+        # raises error
+        with pytest.raises(ValueError):
+            test(email='a@b.com', check='test', confirm='aaaa')
 
         # no error
-        assert validate_validators(email='a@b.com', check='test', confirm='test') is None
+        assert test(email='a@b.com', check='test', confirm='test') is None
         return
 
     def test_validate_form(self):
         from flask import _request_ctx_stack
         _request_ctx_stack.pop()
 
+        # form
+        class ValidateForm(Form):
+            string = StringField('String', [
+                validators.DataRequired(),
+                validators.Length(min=3, max=10)
+            ])
+            boolean = BooleanField('Boolean', [
+                validators.DataRequired(),
+            ])
+
+
+        @validate(ValidateForm)
+        def test(string, boolean):
+            pass
+
         # raises error
         with pytest.raises(ValueError):
-            validate_form(string='a', boolean='test')
+            test(string='a', boolean='test')
 
         # no error
-        assert validate_form(string='test', boolean=True) is None
+        assert test(string='test', boolean=True) is None
+        return
+
+    def test_validate_mixed(self):
+        from flask import _request_ctx_stack
+        _request_ctx_stack.pop()
+
+        # function
+        @validate(
+            email=validators.Email(),
+            one=dict(length=validators.Length(min=3)),
+            two=float
+        )
+        def test(email, one, two):
+            pass
+
+        # no error
+        test(email='a@b.com', one=dict(length='test'), two=1.5)
+
+        # nested error
+        with pytest.raises(ValueError):
+            test(email='a@b.com', one=dict(length='te'), two=1.5)
         return
 
 
