@@ -9,8 +9,13 @@ __version__ = '0.1.0'
 
 
 from .plugin import Occam                    ## noqa
+
 from .decorators import validate, optional   ## noqa
-from .decorators import transactional
-from .decorators import paginate
-from .decorators import log
-from .handlers import ActionHandler, QueryHandler
+from .decorators import transactional        ## noqa
+from .decorators import paginate             ## noqa
+from .decorators import log                  ## noqa
+
+from .handlers import ActionHandler          ## noqa
+from .handlers import QueryHandler           ## noqa
+
+from .errors import ValidationError          ## noqa

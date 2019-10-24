@@ -68,22 +68,37 @@ class log(object):
 
     @classmethod
     def debug(cls, msg):
+        """
+        Log provided message with level DEBUG.
+        """
         return cls(msg, level='debug')
 
     @classmethod
     def info(cls, msg):
+        """
+        Log provided message with level INFO.
+        """
         return cls(msg, level='info')
 
     @classmethod
     def warning(cls, msg):
+        """
+        Log provided message with level WARNING.
+        """
         return cls(msg, level='warning')
 
     @classmethod
     def error(cls, msg):
+        """
+        Log provided message with level ERROR.
+        """
         return cls(msg, level='error')
 
     @classmethod
     def critical(cls, msg):
+        """
+        Log provided message with level CRITICAL.
+        """
         return cls(msg, level='critical')
 
 
@@ -91,9 +106,25 @@ class log(object):
 # ----------
 def paginate(**options):
     """
-    Enable request pagination.
+    Automatically force request pagination for endpoints
+    that shouldn't return all items in the database directly.
+    If this decorator is used, ``limit`` and ``offset`` request
+    arguments are automatically included in the request. The
+    burden is then on developers to do something with those
+    ``limit`` and ``offset`` arguments. An example request header
+    set by this decorator is as follows:
 
-    MORE DOCS
+    .. code-block:: text
+
+        Link: <https://localhost/items?limit=50&offset=50>; rel="next",
+              <https://localhost/items?limit=50&offset=500>; rel="last"
+
+    Args:
+        limit (int): Number of entries to limit a query by.
+        total (int, callable): Number or callable for determining
+            the total number of records that can be returned
+            for the request. This is used in determining the
+            pagination header.
     """
     if 'total' not in options:
         raise AssertionError(
@@ -172,6 +203,13 @@ def paginate(**options):
 # db-related
 # ----------
 def transactional(func):
+    """
+    Decorator for wrapping transactional support around
+    a request handler or API method. By wrapping a method
+    in ``@transactional``, any exception thrown will force
+    a session rollback. Otherwise, the session will be
+    committed.
+    """
     @wraps(func)
     def inner(*args, **kwargs):
         if 'sqlalchemy' not in current_app.extensions:
@@ -190,6 +228,10 @@ def transactional(func):
 # validation
 # ----------
 class OptionalType:
+    """
+    Proxy for making a type optional. Used
+    internally within the module.
+    """
 
     def __init__(self, typ):
         self.type = typ
@@ -205,7 +247,7 @@ def optional(field):
     validation scheme.
 
     Args:
-        field (Field): Field to process validation options for.
+        field (type, Field): Field to process validation options for.
     """
     # parse types as inputs
     if isinstance(field, (type, list, tuple, dict)):
@@ -230,6 +272,16 @@ def optional(field):
 
 
 def create_validator(contract):
+    """
+    Factory pattern for creating custom validator in the style
+    of WTForms. This function takes the contract needed to validate
+    against and returns a ``Form`` object that can perform
+    the validation according to validation rules in the contract.
+
+    Args:
+        contract (dict): Dictionary with key value mappings for
+                         payload contract to validate.
+    """
 
     class ContractValidator(object):
         """
@@ -307,6 +359,9 @@ def create_validator(contract):
             return valid
 
         def validate(self):
+            """
+            Run validation for composite form object.
+            """
             valid = True
 
             # process types in contract
@@ -464,8 +519,9 @@ def validate(*vargs, **vkwargs):
                 if in_request:
                     raise ValidationError('Invalid request payload.', form.errors)
                 else:
-                    errors = yaml.dump(form.errors, indent=2).replace('\n', '\n  ') + '\n'
-                    raise ValueError('Invalid arguments specified.\nErrors:\n  {}'.format(errors))
+                    errors = yaml.dump(form.errors, indent=2)
+                    errors = errors.replace('\n', '\n  ').replace('- ', '  - ') + '\n'
+                    raise ValueError('Invalid arguments specified.\n\nErrors:\n\n  {}'.format(errors))
 
             # subset inputs by validators
             return func(*args, **kwargs)

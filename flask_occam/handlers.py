@@ -15,7 +15,7 @@ from werkzeug.exceptions import NotFound
 # --------
 class QueryHandler(object):
     """
-    Handler for urls like /model/<id>/<query>,
+    Handler for urls like ``/model/:id/:query``,
     where <query> represents a GET request. This
     allows developers to define individual methods
     for performing model-specific queries instead
@@ -39,7 +39,7 @@ class QueryHandler(object):
 
 class ActionHandler(object):
     """
-    Handler for urls like /model/<id>/<action>,
+    Handler for urls like ``/model/:id/:action``,
     where <action> represents a POST request. This
     allows developers to define individual methods
     for performing model-specific actions instead

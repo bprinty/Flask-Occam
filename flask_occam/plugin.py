@@ -9,7 +9,7 @@
 # -------
 import re
 from functools import wraps
-from flask import Flask, Blueprint, Response, current_app, request, jsonify
+from flask import Flask, Blueprint, Response, jsonify
 import types
 
 from .converters import ModelConverter
@@ -40,6 +40,9 @@ def document(obj):
     Parse function or method and save documentation
     information in global DOCS data structure for
     auto-serving documentation.
+
+    Args:
+        obj (callable): Callable object with docstring.
     """
     global DOCS, METHODS
     if obj.__doc__:
@@ -102,7 +105,6 @@ def route(self, rule, **options):
 
     This class-based definition of handlers helps with code organization
     and documentation efforts.
-
     """
     def decorator(obj):
 
@@ -116,6 +118,14 @@ def route(self, rule, **options):
         # class-based definition
         else:
             instance = obj()
+
+            # document callable objects
+            for name in dir(instance):
+                func = getattr(instance, name)
+                if name[0] != '_' and callable(func):
+                    document(func)
+
+            # parse/add url rules
             methods = options.pop("methods", METHODS)
             for meth in methods:
                 handler = meth.lower()
@@ -123,7 +133,6 @@ def route(self, rule, **options):
                     endpoint = handler + '_' + obj.__name__.lower()
                     options['methods'] = [meth]
                     func = getattr(instance, handler)
-                    document(func)
                     app.add_url_rule(
                         rule, endpoint, autojsonify(func),
                         **options
@@ -140,8 +149,38 @@ Blueprint.route = types.MethodType(route, Blueprint)
 # ------
 class Occam(object):
     """
-    Plugin for updating flask functions to handle class-based URL
-    routing.
+    Flask extension class for module, which sets up all flask-related
+    capabilities provided by the module. This object can be initialized
+    directly:
+
+    .. code-block:: python
+
+        from flask import Flask
+        from flask_occam import Occam
+
+        app = Flask(__name__)
+        occam = Occam(app)
+
+    Or lazily via factory pattern:
+
+    .. code-block:: python
+
+        occam = Occam()
+        app = Flask(__name__)
+        occam.init_app(app)
+
+    For additional functionality, it is recommended that the extension
+    be linked to the Flask-SQLAlchemy extension tied to the application:
+
+    .. code-block:: python
+
+        from flask_sqlalchemy import SQLAlchemy
+
+        db = SQLAlchemy()
+        occam = Occam(db)
+        app = Flask(__name__)
+        db.init_app(app)
+        occam.init_app(app)
     """
 
     def __init__(self, app=None, db=None):
@@ -163,7 +202,17 @@ class Occam(object):
             self.init_app(app)
         return
 
-    def init_app(self, app):
+    def init_app(self, app, db=None):
+        """
+        Initialize application via lazy factory pattern.
+
+        Args:
+            app (Flask): Flask application.
+            db (SQAlchemy): Flask SQLAlchemy extension.
+        """
+        if db is not None:
+            self.init_db(db)
+
         self.app = app
         self.app.route = types.MethodType(route, self.app)
         self.app.config.setdefault('OCCAM_AUTODOC_ENABLED', True)
@@ -190,6 +239,12 @@ class Occam(object):
         return
 
     def init_db(self, db):
+        """
+        Initialize database model extensions.
+
+        Args:
+            db (SQAlchemy): Flask SQLAlchemy extension.
+        """
         self.db = db
         self.db.Model.__bases__ += (ModelMixin,)
         return

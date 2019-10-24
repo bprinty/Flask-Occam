@@ -30,7 +30,10 @@ class ModelMixin(object):
 
     def json(self):
         """
-        Return dictionary with model properties.
+        Return dictionary with model properties. This
+        method should be overriden by models to account
+        for model-specific nuances in what to include
+        in return payloads.
         """
         result = {}
         mapper = inspect(self.__class__)
@@ -40,7 +43,7 @@ class ModelMixin(object):
 
     def commit(self):
         """
-        Commit change using session and return item
+        Commit change using session and return item.
         """
         db = current_db()
         db.session.commit()
@@ -57,6 +60,7 @@ class ModelMixin(object):
 
     def update(self, *args, **kwargs):
         """
+        Update current item with specified data.
         """
         # normalize inputs
         if len(args) == 1 and isinstance(args[0], dict):
