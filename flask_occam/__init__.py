@@ -8,9 +8,10 @@ __email__ = 'bprinty@gmail.com'
 __version__ = '0.1.0'
 
 
-from .plugin import Occam                    ## noqa
+from .plugin import Occam, Blueprint         ## noqa
 
-from .decorators import validate, optional   ## noqa
+from .decorators import optional             ## noqa
+from .decorators import validate             ## noqa
 from .decorators import transactional        ## noqa
 from .decorators import paginate             ## noqa
 from .decorators import log                  ## noqa

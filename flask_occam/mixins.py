@@ -151,12 +151,12 @@ class ModelMixin(object):
         unique = []
         mapper = inspect(cls)
         for col in mapper.attrs:
-            if col.columns[0].unique:
-                unique.append(col.key)
+            if hasattr(col, 'columns'):
+                if col.columns[0].unique or col.columns[0].primary_key:
+                    unique.append(col.key)
 
         # query for data and create or update
         result = []
-        db = current_db()
         for record in data:
 
             # query using unique parameters
@@ -170,10 +170,7 @@ class ModelMixin(object):
             # create if it doesn't
             else:
                 item = cls.create(**record)
-                db.session.add(item)
 
             result.append(item)
-
-        db.session.flush()
 
         return result if multiple else result[0]
