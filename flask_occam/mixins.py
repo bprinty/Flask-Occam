@@ -8,7 +8,6 @@
 # imports
 # -------
 from flask import current_app
-from sqlalchemy import inspect
 
 
 # helpers
@@ -35,6 +34,8 @@ class ModelMixin(object):
         for model-specific nuances in what to include
         in return payloads.
         """
+        from sqlalchemy import inspect
+
         result = {}
         mapper = inspect(self.__class__)
         for column in mapper.attrs:
@@ -137,6 +138,8 @@ class ModelMixin(object):
                   by doing bulk operations for querying and
                   the create/update process.
         """
+        from sqlalchemy import inspect
+
         # parse inputs
         data, multiple = [], True
         if len(kwargs):
