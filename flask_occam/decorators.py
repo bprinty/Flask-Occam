@@ -29,6 +29,15 @@ except ImportError:
     current_user = None
 
 
+# helpers
+# -------
+def argspec(func):
+    if sys.version_info[0] >= 3:
+        return list(inspect.signature(func).parameters.keys())
+    else:
+        return list(inspect.getargspec(func).args)
+
+
 # logging
 # -------
 class log(object):
@@ -57,7 +66,7 @@ class log(object):
         @wraps(func)
         def inner(*args, **kwargs):
             data = kwargs.copy()
-            varnames = list(inspect.signature(func).parameters.keys())
+            varnames = argspec(func)
             data.update(dict(zip(varnames, args)))
             data = {k: v for k, v in data.items() if k not in ['cls', 'self']}
             data.setdefault(current_app.config['OCCAM_LOG_USER_FORMAT'], current_user)
@@ -496,7 +505,7 @@ def validate(*vargs, **vkwargs):
                     data = data.to_dict()
             else:
                 data = kwargs.copy()
-                varnames = list(inspect.signature(func).parameters.keys())
+                varnames = argspec(func)
                 data.update(dict(zip(varnames, args)))
                 data = {k: v for k, v in data.items() if k not in ['cls', 'self']}
 
