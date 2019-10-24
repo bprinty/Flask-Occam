@@ -43,28 +43,6 @@ def gather_models():
 
 # converters
 # ----------
-class ListConverter(BaseConverter):
-    """
-    Convert urls with + in their name to a list
-    of those arguments. This is particularly useful
-    when trying to combine responses from different
-    pages into a single response. i.e. `/users/1+2`
-    would return a response containing users 1 and 2.
-
-    This is a popular web feature used by many sites,
-    popularized by Reddit.
-    """
-
-    def to_python(self, value):
-        return value.split('+')
-
-    def to_url(self, values):
-        return '+'.join(
-            BaseConverter.to_url(value)
-            for value in values
-        )
-
-
 class ModelConverter(BaseConverter):
     """
     For url inputs containing a model identifier, look
