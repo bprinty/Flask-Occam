@@ -2,7 +2,7 @@
 Overview
 ========
 
-Flask-Occam is a Flask extension that is designed to help developers create simple and easy to maintain REST APIs. It is a lightweight abstraction on top of Flask's existing tools, designed to simplify API development and reduce the amount of boilerplate needed to do common operations. Using this extension also promotes better code readability and maintainability during the application development lifecycle.
+Flask-Occam is a Flask extension that is designed to help developers create simple and easy to maintain REST APIs. It is a lightweight abstraction on top of Flask's existing tools, designed to simplify API development and reduce the amount of boilerplate needed to perform common operations. Using this extension also promotes better code readability and maintainability during the application development lifecycle.
 
 There are quite a few packages designed to simplify the process of writing REST APIs:
 
@@ -11,7 +11,7 @@ There are quite a few packages designed to simplify the process of writing REST 
     * `Flask-API <https://www.flaskapi.org/>`_
     * `Flask-Restless <https://flask-restless.readthedocs.io>`_
 
-And all make different assumptions about how developers want to structure their APIs. This package is yet another take at solving the same problem, resulting in a slightly different development experience when working with Flask applications. The developers of this package recommend you check out these alternatives to see if they fit your needs better.
+And all make different assumptions about how developers want to structure their APIs. This package is yet another take at solving the same problem, resulting in a slightly different development experience when working with Flask applications. The developers of this package recommend you check out these alternatives along with Flask-Occam to see if they fit your needs better.
 
 
 A Minimal Application
