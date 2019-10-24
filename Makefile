@@ -7,8 +7,9 @@
 # config
 # ------
 PYTHON     = python3
-PROJECT    = `$(PYTHON) -c 'print(__import__("lib").__pkg__)'`
-VERSION    = `$(PYTHON) -c 'print(__import__("lib").__version__)'`
+PAKCAGE    = flask_occam
+PROJECT    = `$(PYTHON) -c 'print(__import__("flask_occam").__pkg__)'`
+VERSION    = `$(PYTHON) -c 'print(__import__("flask_occam").__version__)'`
 
 
 # targets
