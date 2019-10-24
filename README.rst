@@ -1,20 +1,20 @@
 
 |Build status| |Code coverage| |Maintenance yes| |GitHub license| |Documentation Status|
 
-.. |Build status| image:: https://travis-ci.org/bprinty/gems.png?branch=master
-   :target: https://travis-ci.org/bprinty/gems
+.. |Build status| image:: https://travis-ci.com/bprinty/Flask-Occam.png?branch=master
+   :target: https://travis-ci.com/bprinty/Flask-Occam
 
-.. |Code coverage| image:: https://codecov.io/gh/bprinty/gems/branch/master/graph/badge.svg
-   :target: https://codecov.io/gh/bprinty/gems
+.. |Code coverage| image:: https://codecov.io/gh/bprinty/Flask-Occam/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/bprinty/Flask-Occam
 
 .. |Maintenance yes| image:: https://img.shields.io/badge/Maintained%3F-yes-green.svg
    :target: https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity
 
 .. |GitHub license| image:: https://img.shields.io/github/license/Naereen/StrapDown.js.svg
-   :target: https://github.com/bprinty/gems/blob/master/LICENSE
+   :target: https://github.com/bprinty/Flask-Occam/blob/master/LICENSE
 
-.. |Documentation Status| image:: https://readthedocs.org/projects/gems/badge/?version=latest
-   :target: http://gems.readthedocs.io/?badge=latest
+.. |Documentation Status| image:: https://readthedocs.org/projects/flask-occam/badge/?version=latest
+   :target: http://flask-occam.readthedocs.io/?badge=latest
 
 
 ============================
