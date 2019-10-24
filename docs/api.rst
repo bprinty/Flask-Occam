@@ -32,9 +32,6 @@ Handlers
 Converters
 ----------
 
-.. autoclass:: flask_occam.converters.ListConverter
-   :members:
-
 .. autoclass:: flask_occam.converters.ModelConverter
    :members:
 
