@@ -300,7 +300,7 @@ Nice, right? Defining your APIs like the above helps with code clarity, and forc
     .. autoclass:: app.models.Item
        :members:
 
-In addition, you can have Flask-Occum automatically serve REST-based documentation for your endpoints by enabling the ``OCCUM_DOCS_BLUEPRINT`` configuration option. With that blueprint, you can retrieve endpoint documentation via request:
+In addition, you can have Flask-Occum automatically serve REST-based documentation for your endpoints by enabling the ``OCCAM_AUTODOC_ENABLED`` configuration option. With that configuration option set to ``True``, you can retrieve endpoint documentation via request:
 
 ..  code-block:: bash
 
@@ -430,13 +430,13 @@ With the ``@validate`` decorator, you could make payload validation as simple as
 
 .. code-block:: python
 
-    @api.route()
+    @api.route('/items', methods=['POST'])
     @validate(
         string_param=str,
         int_param=int,
         float_param=float
     )
-    def get_item():
+    def create_item():
         pass
 
 You can also use this decorator on API functions, if you want to structure your application so that request handling is dispatched to API functions. The ``@validate`` decorator will check all function arguments according to their expected contract:
@@ -457,9 +457,15 @@ When calling this function, if the inputs aren't specified according to the vali
 .. code-block:: python
 
     >>> process_item('test', 'test', 'test')
-    Invalid arguments specified. Errors:
 
-        TODO: INCLUDE ERRORS HERE
+    ValueError: Invalid arguments specified.
+
+    Errors:
+
+      float_param:
+        - Invalid type. Expecting `<class 'float'>`.
+      int_param:
+        - Invalid type. Expecting `<class 'int'>`.
 
 
 In addition to supporting built-in types, the ``@validate`` decorator also supports validators from the `WTForms <https://wtforms.readthedocs.io/en/stable/validators.html>`_ library. For example, to create custom validators for an email and password (with confirmation), you can do something like the following:
@@ -519,6 +525,29 @@ Finally, if you want to configure your form object separately, you can do so. He
         pass
 
 
+And to really hammer in the point, here is an example with mixed types and validators, with nested validation:
+
+.. code-block:: python
+
+    from wtforms.validators import Email, NumberRange
+    
+    @validate(
+        email=Email(),             # email address
+        name=str,                  # string
+        tags=optional([str]),      # optional list of strings
+        info=dict(                 # dictionary with nested validation
+            age=NumberRange(       # 0 < age < 120
+                min=0,
+                max=120
+            ),
+            nickname=optional(str) # optional string
+        )
+    )
+    def create_user(email, name, tags=None, info=None):
+        pass
+
+
+
 ``@log``
 ++++++++
 
@@ -559,17 +588,20 @@ Applications serving lots of data often need a mechanism for paginating requests
 
     @app.route("/items", methods=['GET'])
     @paginate(limit=50, total=Item.count)
-    def get_items(limit, offset):
-        items = Item.all(limit=limit, offset=offset)
+    def get_items():
+        items = Item.all(
+            limit=request.args['limit'],
+            offset=request.args['offset']
+        )
         return [item.json() for item in items], 200
 
-Arguments to the ``@paginate`` decorator are as follows:
+Request arguments added automatically by the ``@paginate`` decorator are as follows:
 
     * **limit** - The number of elements to paginate by.
     * **total** - The total number of elements available in the database. This can be either a number or a ``callable``.
 
 
-Behind the scenes, this decorator will automatically set ``limit`` and ``offset`` function argument values, which developers can use when constructing a response. In the example above, if a request is made to ``/items``, ``limit`` will be set to 50, and ``offset`` will be set to 0. Response headers detailing the next request to make for more data will also automatically be set. See below for an example:
+Behind the scenes, this decorator will automatically set ``limit`` and ``offset`` request arguments, which developers can use when constructing a response. In the example above, if a request is made to ``/items``, ``limit`` will be set to 50, and ``offset`` will be set to 0. Response headers detailing the next request to make for more data will also automatically be set. See below for an example:
 
 .. code-block:: bash
 
@@ -580,8 +612,9 @@ Behind the scenes, this decorator will automatically set ``limit`` and ``offset`
     > 
     < HTTP/1.1 206 Partial Content
     < Content-Type: application/json; charset=UTF-8
-    < X-Total-Count: 55
-    < Link: <http://localhost:5000/items?limit=50&offset=1>; rel="next"
+    < X-Total-Count: 540
+    < Link: <http://localhost:5000/items?limit=50&offset=51>; rel="next"
+            <http://localhost:5000/items?limit=50&offset=501>; rel="last"
     < 
     [
         {'id': 1, 'name': 'one'},
@@ -620,42 +653,42 @@ Similarly to the ``@log`` decorator, this module simply provides an orthogonal m
 
 
     ## Create 
-    # before
+    # without
     item = Item(
         name='test',
         url='http://localhost:5000/items/1'
     )
     db.session.add(item)
 
-    # after
+    # with
     item = Item.create(
         name='test'
         url='http://localhost:5000/items/1'
     )
 
     ## Read
-    # before
+    # without
     item = db.session.query(Item).filter_by(id=1).first()
     items = db.session.query(Item).limit(5).offset(5).all()
 
-    # after
+    # with
     item = Item.get(1)
     items = Item.all(limit=5, offset=5)
 
     ## Update
-    # before
+    # without
     item.name = 'test2'
     item.url = None
     db.session.add(item)
 
-    # after
+    # with
     item.update(name='test2', url=None)
 
     ## Delete 
-    # before
+    # without
     db.session.delete(item)
 
-    # after
+    # with
     item.delete()
 
 
