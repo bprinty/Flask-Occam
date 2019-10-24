@@ -7,15 +7,14 @@
 
 # imports
 # -------
+import sys
 import pytest
 from flask_occam import validate, optional
 from flask_occam import log
 from flask_occam import transactional
-from wtforms import Form, StringField, BooleanField, PasswordField, validators
+from wtforms import Form, StringField, BooleanField, validators
 
-from .fixtures import app, Item, logs, logger
-
-from flask_occam.errors import ValidationError
+from .fixtures import app, Item, logs
 
 
 # log
@@ -43,11 +42,13 @@ def get_log(var):
 
 class TestLogDecorator(object):
 
+    @pytest.mark.skipif(sys.version_info[0] < 3, reason='Test python2 incompatible.')
     def test_url_logging(self, client):
         client.get('/log/0')
-        assert 'test with 0' in logs.getvalue()
+        assert 'test with 0' in str(logs.getvalue())
         return
 
+    @pytest.mark.skipif(sys.version_info[0] < 3, reason='Test python2 incompatible.')
     def test_formatting(self):
         log_default(1, object())
         assert 'test with 1 and object' in logs.getvalue()
