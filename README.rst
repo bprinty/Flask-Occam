@@ -41,7 +41,7 @@ Alternatively with easy_install, run:
     $ easy_install Flask-Occam
 
 
-To install the bleeding-edge version of the project:
+To install the bleeding-edge version of the project (not recommended):
 
 .. code-block:: bash
 
