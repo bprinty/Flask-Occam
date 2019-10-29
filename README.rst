@@ -146,12 +146,12 @@ The following is a minimal application highlighting most of the major features p
 
 There's quite a bit to unpack from the application detailed above, including:
 
-    * Facilities for automatically resolving model identifiers into objects via url converters.
-    * Automatic pagination (via response header) for requests.
-    * Automatic database transaction support for endpoint handlers.
-    * Tools for simpler logging of requests or API methods.
-    * Automatic payload validation (with support for WTForms validators).
-    * SQLAlchemy extensions for CRUD operations on models (providing a simpler API).
+* Facilities for automatically resolving model identifiers into objects via url converters.
+* Automatic pagination (via response header) for requests.
+* Automatic database transaction support for endpoint handlers.
+* Tools for simpler logging of requests or API methods.
+* Automatic payload validation (with support for WTForms validators).
+* SQLAlchemy extensions for CRUD operations on models (providing a simpler API).
 
 
 Documentation
