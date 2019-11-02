@@ -220,7 +220,6 @@ class TestValidateDecorator(object):
                 validators.DataRequired(),
             ])
 
-
         @validate(ValidateForm)
         def test(string, boolean):
             pass
@@ -254,4 +253,23 @@ class TestValidateDecorator(object):
             test(email='a@b.com', one=dict(length='te'), two=1.5)
         return
 
+    def test_validate_optional(self):
+        from flask import _request_ctx_stack
+        _request_ctx_stack.pop()
 
+        # function
+        @validate.optional(
+            one=str,
+            two=float,
+        )
+        def test(one='test', two=1.1):
+            pass
+
+        # no error
+        test(one='str')
+        test(two=5.5)
+
+        # error
+        with pytest.raises(ValueError):
+            test(one=1)
+        return

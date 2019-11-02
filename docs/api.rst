@@ -46,4 +46,5 @@ Decorators
 
 .. autofunction:: flask_occam.decorators.transactional
 
-.. autofunction:: flask_occam.decorators.validate
+.. autoclass:: flask_occam.decorators.validate
+    :members:

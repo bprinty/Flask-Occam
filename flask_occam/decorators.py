@@ -280,7 +280,7 @@ def optional(field):
         return obj
 
 
-def create_validator(contract):
+def create_validator(contract, force_optional=False):
     """
     Factory pattern for creating custom validator in the style
     of WTForms. This function takes the contract needed to validate
@@ -290,6 +290,8 @@ def create_validator(contract):
     Args:
         contract (dict): Dictionary with key value mappings for
                          payload contract to validate.
+        force_optional (bool): Force all validators in contract
+                               to be wrapped with optional().
     """
 
     class ContractValidator(object):
@@ -301,6 +303,8 @@ def create_validator(contract):
         form_contract = {}
         for key in contract:
             field = contract[key]
+            if force_optional and not isinstance(field, OptionalType):
+                field = optional(field)
             if isinstance(field, (type, list, tuple, dict, OptionalType)):
                 type_contract[key] = field
             elif isinstance(field, (Field, UnboundField)):
@@ -400,7 +404,7 @@ def create_validator(contract):
     return ContractValidator
 
 
-def validate(*vargs, **vkwargs):
+class validate(object):
     """
     Validate payload data inputted to request handler or
     API method. This decorator can take any arbitrary
@@ -481,19 +485,23 @@ def validate(*vargs, **vkwargs):
             def login():
                 return
     """
-    # validator class
-    if len(vargs):
-        Validator = vargs[0]
 
-    # validator as keyword arguments
-    elif len(vkwargs):
-        Validator = create_validator(vkwargs)
+    def __init__(self, *args, **kwargs):
+        # validator class
+        if len(args):
+            self.Validator = args[0]
 
-    # incorrect arguments
-    else:
-        raise AssertionError('No validation rule supplied to @validate.')
+        # validator as keyword arguments
+        elif len(kwargs):
+            self.Validator = create_validator(kwargs, force_optional=kwargs.get('force_optional', False))
 
-    def decorator(func):
+        # incorrect arguments
+        else:
+            raise AssertionError('No validation rule supplied to @validate.')
+        return
+
+    def __call__(self, func):
+
         @wraps(func)
         def inner(*args, **kwargs):
             in_request = has_request_context()
@@ -518,10 +526,10 @@ def validate(*vargs, **vkwargs):
 
             # instantiate validator with data (changes based
             # on normal vs dynamic validator)
-            if isinstance(Validator, Form):
-                form = Validator(MultiDict(data))
+            if isinstance(self.Validator, Form):
+                form = self.Validator(MultiDict(data))
             else:
-                form = Validator(data=data)
+                form = self.Validator(data=data)
 
             # run payload validation
             if not form.validate():
@@ -535,4 +543,12 @@ def validate(*vargs, **vkwargs):
             # subset inputs by validators
             return func(*args, **kwargs)
         return inner
-    return decorator
+
+    @classmethod
+    def optional(cls, *args, **kwargs):
+        """
+        Force all specified parameters to be wrapped with
+        optional() declaration.
+        """
+        kwargs['force_optional'] = True
+        return cls(*args, **kwargs)
