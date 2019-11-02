@@ -8,6 +8,7 @@
 # imports
 # -------
 import re
+import six
 from functools import wraps
 from flask import Flask, Blueprint, Response, jsonify
 import types
@@ -66,7 +67,7 @@ def autojsonify(func):
     def _(*args, **kwargs):
         ret = func(*args, **kwargs)
         if isinstance(ret, tuple):
-            if not isinstance(ret[0], Response):
+            if isinstance(ret[0], (list, tuple, dict)):
                 ret = list(ret)
                 ret[0] = jsonify(ret[0])
                 ret = tuple(ret)
