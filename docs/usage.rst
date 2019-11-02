@@ -547,7 +547,7 @@ And to really hammer in the point, here is an example with mixed types and valid
         pass
 
 
-As you can see above, optional validation can occur for parameters wrapped in with the ``optional``. This is useful for ``PUT`` requests where updates don't need to happen on every field during every request. To explicitly make all parameters in the validation block optional, you can use the ``@validate.optional`` decorator:
+As you can see above, optional validation can occur for parameters wrapped in with the ``optional`` function. This is useful for ``PUT`` requests where updates don't need to happen on every field during every request. To explicitly make all parameters in the validation block optional, you can use the ``@validate.optional`` decorator:
 
 .. code-block:: python
 
