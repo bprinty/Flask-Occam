@@ -8,7 +8,6 @@
 # imports
 # -------
 import re
-import six
 from functools import wraps
 from flask import Flask, Blueprint, Response, jsonify
 import types

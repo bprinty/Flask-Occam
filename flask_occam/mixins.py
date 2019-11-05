@@ -164,7 +164,7 @@ class ModelMixin(object):
 
             # query using unique parameters
             params = {k: record[k] for k in unique if k in record}
-            item = cls.get(**params)
+            item = cls.get(**params) if len(params) else None
 
             # update if item exists
             if item is not None:
