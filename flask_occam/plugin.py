@@ -232,7 +232,7 @@ class Occam(object):
                     for method in METHODS:
                         if method in DOCS[endpoint]:
                             doc.append(DOCS[endpoint][method])
-                    return "<pre>\n" + '\n---\n'.join(doc) + "\n</pre>", 200
+                    return "<pre>\n" + '\n---\n'.join(doc) + "\n</pre>\n", 200
                 return '', 204
 
         return
