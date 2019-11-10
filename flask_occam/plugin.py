@@ -233,10 +233,14 @@ class DataLoader(object):
     def __call__(self, data, action=None):
 
         def load(filename):
-            if not os.path.exists(filename):
-                raise FileNotFoundError(filename)
-            with open(filename, 'r') as fi:
-                data = yaml.load(fi, Loader=yaml.FullLoader)
+            if hasattr(filename, 'read'):
+                fi = filename
+            else:
+                if not os.path.exists(filename):
+                    raise FileNotFoundError(filename)
+                fi = open(filename, 'r')
+            data = yaml.load(fi, Loader=yaml.FullLoader)
+            fi.close()
             return data
 
         # gather models
