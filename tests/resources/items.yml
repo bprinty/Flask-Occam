@@ -1,0 +1,5 @@
+- name: item load 1
+  archived: yes
+
+- name: item load 2
+  archived: no
