@@ -9,7 +9,9 @@ Base
 .. autoclass:: flask_occam.plugin.Occam
    :members:
 
-
+.. autoclass:: flask_occam.plugin.DataLoader
+   :members:
+      
 
 Databse Mixins
 --------------
