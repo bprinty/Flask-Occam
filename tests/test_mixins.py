@@ -7,6 +7,8 @@
 
 # imports
 # -------
+import os
+from . import RESOURCES
 from .fixtures import db, Item
 
 
@@ -67,4 +69,33 @@ class TestModelMixin(object):
         item.delete()
         item = Item.get(item.id)
         assert item is None
+        return
+
+    def test_load(self, client):
+        # simple action function
+        def act(x):
+            x.test = 'test'
+            return
+
+        # single model
+        items = Item.load(os.path.join(RESOURCES, 'items.yml'), action=act)
+        assert len(items) == 2
+        assert isinstance(items[0], Item)
+        assert items[0].id is not None
+        assert items[0].test == 'test'
+
+        # overwrite with different entrypoint
+        items = db.load.items(os.path.join(RESOURCES, 'items.yml'), action=act)
+        assert len(items) == 2
+        assert isinstance(items[0], Item)
+        assert items[0].id is not None
+        assert items[0].test == 'test'
+
+        # multiple models
+        created = db.load(os.path.join(RESOURCES, 'seed.yml'), action=act)
+        items = created['Item']
+        assert len(items) == 2
+        assert isinstance(items[0], Item)
+        assert items[0].id is not None
+        assert items[0].test == 'test'
         return

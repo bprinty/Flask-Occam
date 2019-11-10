@@ -102,7 +102,7 @@ class ItemUpdates(object):
 # models
 # ------
 class Item(db.Model):
-    __tablename__ = 'item'
+    __tablename__ = 'items'
 
     # basic
     id = db.Column(db.Integer, primary_key=True)
