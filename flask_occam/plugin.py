@@ -8,6 +8,9 @@
 # imports
 # -------
 import re
+import os
+import six
+import yaml
 from functools import wraps
 from flask import Flask, Blueprint, Response, jsonify
 import types
@@ -31,6 +34,7 @@ METHODS = [
     'PATCH'
 ]
 DOCS = {}
+MODELS = {}
 
 
 # helpers
@@ -145,6 +149,167 @@ def route(self, rule, **options):
 Blueprint.route = route
 
 
+def gather_models():
+    """
+    Inspect sqlalchemy models from current context and set global
+    dictionary to be used in url conversion.
+    """
+    global MODELS
+
+    from flask import current_app
+    if 'sqlalchemy' not in current_app.extensions:
+        return
+
+    # inspect current models and add to map
+    db = current_app.extensions['sqlalchemy'].db
+    for cls in db.Model._decl_class_registry.values():
+        if isinstance(cls, type) and issubclass(cls, db.Model):
+            MODELS[cls.__name__] = cls
+            MODELS[cls.__table__.name] = cls
+    return
+
+
+class DataLoader(object):
+    """
+    Helper for loading data into application via config file. Using
+    the following model definition as an example:
+
+    .. code-block:: python
+
+        class Item(db.Model):
+            __tablename__ = 'item'
+
+            # basic
+            id = db.Column(db.Integer, primary_key=True)
+            name = db.Column(db.String(255), nullable=False, unique=True, index=True)
+            archived = db.Column(db.Boolean, default=False)
+
+    You can seed data from the following config file:
+
+    .. code-block:: yaml
+
+        - name: item 1
+          archived: True
+
+        - name: item 2
+          archived: False
+
+    Into the application using:
+
+    .. code-block:: python
+
+        # via model directly
+        User.seed('config.yml')
+
+        # via db
+        db.seed.users('config.yml')
+
+    Additionally, this class supports defining multiple types of models
+    in config files. If you want to load multiple types of models via
+    config, you can use the following syntax in your config:
+
+    .. code-block:: yaml
+
+        Item:
+            - name: item 1
+              archived: True
+
+        User:
+            - name: test user
+              email: email@email.com
+
+    And load the data in your application via:
+
+    .. code-block:: python
+
+        db.seed('config.yml')
+
+    """
+
+    def __init__(self, model=None):
+        self.model = model
+        return
+
+    def __call__(self, data, action=None):
+
+        def load(filename):
+            if not os.path.exists(filename):
+                raise FileNotFoundError(filename)
+            with open(filename, 'r') as fi:
+                data = yaml.load(fi, Loader=yaml.FullLoader)
+            return data
+
+        # gather models
+        global MODELS
+        if not MODELS:
+            gather_models()
+
+        # normalize inputs
+        if isinstance(data, six.string_types):
+            data = load(data)
+        if not isinstance(data, (list, tuple)):
+            data = [data]
+
+        # format list for known model
+        if self.model is not None:
+            if not isinstance(self.model, six.string_types):
+                model = self.model.__name__
+            single = True
+            create = [{self.model: data}]
+
+        # format list for many embedded models
+        else:
+            if isinstance(data, dict):
+                reformat = True
+                for key in data:
+                    if key not in MODELS:
+                        reformat = False
+                        break
+                if reformat:
+                    data = [{key: data[key]} for key in data]
+            if not isinstance(data, (list, tuple)):
+                raise AssertionError('Expected data to be in [{model: data}] format.')
+            single = False
+            create = data
+
+        # iterate through create list and create the items
+        db = {}
+        for item in create:
+            if not isinstance(item, dict):
+                raise AssertionError('Invalid format for seed file, expected [{model: data}, ...]')
+
+            # upsert the data
+            model = list(item.keys())[0]
+            if model not in MODELS:
+                raise AssertionError('Model {} could not be found, or config in invalid format.'.format(model))
+            results = MODELS[model].upsert(item[model])
+            db[model] = results
+
+            # run specified actions
+            if action is not None:
+                if not isinstance(results, (list, tuple)):
+                    results = [results]
+                for instance in results:
+                    action(instance)
+
+        return db if not single else db[list(db.keys())[0]]
+
+    def __getattr__(self, attr):
+        # invalid use case
+        if self.model is not None:
+            raise AssertionError('Please use db.load or db.load.table for loading data.')
+
+        # gather models
+        global MODELS
+        if not MODELS:
+            gather_models()
+
+        if attr not in MODELS:
+            raise AssertionError('Can not load data for table {}. Table does not exist.'.format(attr))
+
+        return DataLoader(model=attr)
+
+
 # plugin
 # ------
 class Occam(object):
@@ -246,4 +411,5 @@ class Occam(object):
         """
         self.db = db
         self.db.Model.__bases__ += (ModelMixin,)
+        self.db.load = DataLoader()
         return
