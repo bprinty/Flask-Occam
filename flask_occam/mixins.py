@@ -181,7 +181,43 @@ class ModelMixin(object):
     @classmethod
     def load(cls, data, action=None):
         """
-        Load data from config file.
+        Helper for loading data into application via config file. Using
+        the following model definition as an example:
+
+        .. code-block:: python
+
+            class Item(db.Model):
+                __tablename__ = 'item'
+
+                # basic
+                id = db.Column(db.Integer, primary_key=True)
+                name = db.Column(db.String(255), nullable=False, unique=True, index=True)
+                archived = db.Column(db.Boolean, default=False)
+
+        You can seed data from the following config file:
+
+        .. code-block:: yaml
+
+            - name: item 1
+              archived: True
+
+            - name: item 2
+              archived: False
+
+        Into the application using:
+
+        .. code-block:: python
+
+            # via model directly
+            User.seed('config.yml')
+
+            # via db
+            db.seed.users('config.yml')
+
+        Arguments:
+            data (str): File handle or path to config file.
+            action (callable): Function to call on each loaded item.
+                               Takes single created item as input.
         """
         db = current_db()
         loader = getattr(db.load, cls.__table__.name)
