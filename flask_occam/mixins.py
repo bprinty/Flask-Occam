@@ -177,3 +177,12 @@ class ModelMixin(object):
             result.append(item)
 
         return result if multiple else result[0]
+
+    @classmethod
+    def load(cls, data, action=None):
+        """
+        Load data from config file.
+        """
+        db = current_db()
+        loader = getattr(db.load, cls.__table__.name)
+        return loader(data=data, action=action)
