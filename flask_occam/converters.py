@@ -18,7 +18,9 @@ def gather_models():
     """
     global MODELS
 
-    from flask import current_app
+    from flask import current_app, has_app_context
+    if not has_app_context():
+        return
     if 'sqlalchemy' not in current_app.extensions:
         return
 

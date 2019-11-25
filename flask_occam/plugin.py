@@ -391,6 +391,13 @@ class Occam(object):
         self.app.url_map.converters['id'] = ModelConverter
         self.app.register_error_handler(ValidationError, ValidationError.handler)
 
+        # gather models for url converters
+        @self.app.before_first_request
+        def occam_db_init():
+            if hasattr(self, 'db'):
+                from .converters import gather_models
+                gather_models()
+
         # add auto-documentation if specified
         if self.app.config['OCCAM_AUTODOC_PREFIX']:
             @app.route(self.app.config['OCCAM_AUTODOC_PREFIX'] + '/<path:endpoint>')
