@@ -5,7 +5,7 @@ __url__ = 'https://github.com/bprinty/Flask-Occam'
 __info__ = 'Flask extension for simplifying REST API development.'
 __author__ = 'Blake Printy'
 __email__ = 'bprinty@gmail.com'
-__version__ = '0.1.6'
+__version__ = '0.1.7'
 
 
 from .plugin import Occam, Blueprint         ## noqa
