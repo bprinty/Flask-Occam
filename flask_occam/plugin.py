@@ -394,9 +394,8 @@ class Occam(object):
         # gather models for url converters
         @self.app.before_first_request
         def occam_db_init():
-            if hasattr(self, 'db'):
-                from .converters import gather_models
-                gather_models()
+            from .converters import gather_models
+            gather_models()
 
         # add auto-documentation if specified
         if self.app.config['OCCAM_AUTODOC_PREFIX']:
