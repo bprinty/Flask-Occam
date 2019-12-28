@@ -37,6 +37,15 @@ class ItemQueries(QueryHandler):
         return jsonify(archived=item.archived), 200
 
 
+@app.route('/items/check/<check>')
+class ItemCheck(object):
+    def get(self, check):
+        item = Item.get(id=check)
+        if item is None:
+            raise NotFound
+        return jsonify(msg='Found Item'), 200
+
+
 # tests
 # -----
 class TestCRUD(object):
@@ -112,6 +121,11 @@ class TestHandlers(object):
         response = client.get('/items/{}/status'.format(items[1].id))
         assert response.status_code == 200
         assert response.json['archived'] is False
+        return
+
+    def test_param_handler(self, client, items):
+        response = client.get('/items/check/1')
+        assert response.status_code == 200
         return
 
 
