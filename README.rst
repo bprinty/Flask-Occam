@@ -115,7 +115,7 @@ The following is a minimal application highlighting most of the major features p
 
     @app.route('/items/<id(Item):item>')
     class SingleItem(object):
-        
+
         def get(self, item):
             """
             GET /items/:id
@@ -164,3 +164,13 @@ Questions/Feedback
 ==================
 
 File an issue in the `GitHub issue tracker <https://github.com/bprinty/Flask-Occam/issues>`_.
+
+
+.. TODO: Add validate method for request headers - create ticket in JIRA when committing to repo
+.. @validate.headers(content_type='image/png')
+.. @validate.headers({
+..   'Content-Type': 'image/png'
+.. })
+.. @validate.headers({
+..   'Content-Type': ['image/png', 'image/png;base64']
+.. })
