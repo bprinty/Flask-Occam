@@ -18,5 +18,6 @@ from .decorators import log                  ## noqa
 
 from .handlers import ActionHandler          ## noqa
 from .handlers import QueryHandler           ## noqa
+from .handlers import UpdateHandler          ## noqa
 
 from .errors import ValidationError          ## noqa
