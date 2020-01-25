@@ -8,9 +8,9 @@
 # imports
 # -------
 import pytest
-from flask import jsonify
+from flask import jsonify, request
 
-from flask_occam import transactional, ActionHandler, QueryHandler
+from flask_occam import transactional, validate, ActionHandler, QueryHandler, UpdateHandler
 from .fixtures import app, Item
 
 
@@ -28,6 +28,16 @@ class ItemActions(ActionHandler):
     def unarchive(self, item):
         item.archived = False
         return jsonify(msg='Unarchived item'), 204
+
+
+@app.route('/items/<id(Item):item>/<resource>')
+class ItemPropertyUpdates(UpdateHandler):
+
+    @validate(data=str)
+    @transactional
+    def name(self, item):
+        item.name = request.json['data']
+        return jsonify(msg='Updated item name'), 204
 
 
 @app.route('/items/<id(Item):item>/<query>')
@@ -121,6 +131,21 @@ class TestHandlers(object):
         response = client.get('/items/{}/status'.format(items[1].id))
         assert response.status_code == 200
         assert response.json['archived'] is False
+        return
+
+    def test_update_handler(self, client, items):
+        item = Item.create(name='handler-update').commit()
+
+        # update it
+        response = client.put('/items/{}/name'.format(item.id), json=dict(
+            data='not handler update'
+        ))
+        assert response.status_code == 204
+
+        # read it back
+        response = client.get('/items/{}'.format(item.id))
+        assert response.status_code == 200
+        assert response.json['name'] == 'not handler update'
         return
 
     def test_param_handler(self, client, items):
