@@ -1,4 +1,4 @@
-Flask<=1.0.3
-WTForms<=2.2.1
+Flask
+WTForms
 PyYAML
 six
