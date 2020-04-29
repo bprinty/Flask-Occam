@@ -493,7 +493,11 @@ class validate(object):
 
         # validator as keyword arguments
         elif len(kwargs):
-            self.Validator = create_validator(kwargs, force_optional=kwargs.get('force_optional', False))
+            optional = False
+            if 'force_optional' in kwargs:
+                optional = kwargs['force_optional']
+                del kwargs['force_optional']
+            self.Validator = create_validator(kwargs, force_optional=optional)
 
         # incorrect arguments
         else:

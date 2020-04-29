@@ -82,6 +82,7 @@ class ModelConverter(BaseConverter):
     __param__ = 'id'
 
     def __init__(self, map, model):
+        self.map = map
         self.model = model
         return
 
@@ -112,4 +113,4 @@ class ModelConverter(BaseConverter):
         return model
 
     def to_url(self, value):
-        return BaseConverter.to_url(getattr(value, self.__param__))
+        return super(ModelConverter, self).to_url(getattr(value, self.__param__))
