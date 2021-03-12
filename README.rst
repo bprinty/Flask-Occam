@@ -1,16 +1,16 @@
 
 |Build status| |Code coverage| |Maintenance yes| |GitHub license| |Documentation Status|
 
-.. |Build status| image:: https://travis-ci.com/bprinty/Flask-Occam.png?branch=master
-   :target: https://travis-ci.com/bprinty/Flask-Occam
+.. |Build status| image:: https://github.com/bprinty/Flask-Occam/actions/workflows/ci.yml/badge.svg
+   :target: https://github.com/bprinty/Flask-Occam/actions/workflows/ci.yml
 
 .. |Code coverage| image:: https://codecov.io/gh/bprinty/Flask-Occam/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/bprinty/Flask-Occam
 
 .. |Maintenance yes| image:: https://img.shields.io/badge/Maintained%3F-yes-green.svg
-   :target: https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity
+   :target: https://github.com/bprinty/Flask-Occam/graphs/commit-activity
 
-.. |GitHub license| image:: https://img.shields.io/github/license/Naereen/StrapDown.js.svg
+.. |GitHub license| image:: https://img.shields.io/github/license/bprinty/Flask-Occam.svg
    :target: https://github.com/bprinty/Flask-Occam/blob/master/LICENSE
 
 .. |Documentation Status| image:: https://readthedocs.org/projects/flask-occam/badge/?version=latest
