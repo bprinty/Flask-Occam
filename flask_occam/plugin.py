@@ -15,7 +15,7 @@ from functools import wraps
 from flask import Flask, Blueprint, Response, jsonify
 import types
 
-from .converters import ModelConverter
+from .converters import ModelConverter, class_registry
 from .mixins import ModelMixin
 from .errors import ValidationError
 
@@ -162,7 +162,8 @@ def gather_models():
 
     # inspect current models and add to map
     db = current_app.extensions['sqlalchemy'].db
-    for cls in db.Model._decl_class_registry.values():
+    registry = class_registry(db.Model)
+    for cls in registry.values():
         if isinstance(cls, type) and issubclass(cls, db.Model):
             MODELS[cls.__name__] = cls
             MODELS[cls.__table__.name] = cls

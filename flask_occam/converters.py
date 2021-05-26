@@ -11,6 +11,18 @@ from werkzeug.exceptions import NotFound
 MODELS = dict()
 
 
+def class_registry(cls):
+    """
+    Function for dynamically getting class
+    registry dictionary from specified model.
+    """
+    try:
+        return dict(cls._sa_registry._class_registry)
+    except:
+        return dict(cls._decl_class_registry)
+    return
+
+
 def gather_models():
     """
     Inspect sqlalchemy models from current context and set global
@@ -26,7 +38,8 @@ def gather_models():
 
     # inspect current models and add to map
     db = current_app.extensions['sqlalchemy'].db
-    for cls in db.Model._decl_class_registry.values():
+    registry = class_registry(db.Model)
+    for cls in registry.values():
         if isinstance(cls, type) and issubclass(cls, db.Model):
 
             # class name
